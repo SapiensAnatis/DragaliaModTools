@@ -40,13 +40,13 @@ public class ImportDictionaryCommand : Command
 
         AssetBundleHelperBinder assetBundleBinder = new(assetBundleArgument);
         OutputPathBinder outputPathBinder = new(assetBundleArgument, outputArgument, inPlaceOption);
-        
+
         this.AddArgument(assetBundleArgument);
         this.AddArgument(assetArgument);
         this.AddArgument(dictionaryArgument);
         this.AddArgument(outputArgument);
         this.AddOption(inPlaceOption);
-        
+
         this.SetHandler(
             DoImport,
             assetBundleArgument,
