@@ -6,6 +6,7 @@
     <LangVersion>preview</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>ModTools</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,5 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SerializedDictionaryPlugin.Shared\SerializableDictionaryPlugin.Shared.csproj" />
   </ItemGroup>
+
+
 
 </Project>

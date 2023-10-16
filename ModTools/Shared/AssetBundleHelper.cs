@@ -1,7 +1,7 @@
 ﻿using AssetsTools.NET.Extra;
 using AssetsTools.NET;
 
-namespace DictionaryCli;
+namespace ModTools;
 
 public class AssetBundleHelper : IDisposable
 {
@@ -16,14 +16,11 @@ public class AssetBundleHelper : IDisposable
         this.manager = manager;
         this.bundleInstance = bundleInstance;
 
-        AssetsFileInstance fileInstance = manager.LoadAssetsFileFromBundle(
+        this.fileInstance = manager.LoadAssetsFileFromBundle(
             bundleInstance,
             index: FileIndex,
             loadDeps: false
         );
-
-        this.bundleInstance = bundleInstance;
-        this.fileInstance = fileInstance;
     }
 
     public void Dispose()

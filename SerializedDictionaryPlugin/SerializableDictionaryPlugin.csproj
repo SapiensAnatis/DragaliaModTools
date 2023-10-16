@@ -12,7 +12,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SerializedDictionaryPlugin.Shared\SerializableDictionaryPlugin.Shared.csproj" />
-		<ProjectReference Include="..\UABEAvalonia\UABEAvalonia.csproj" PrivateAssets="all" />
+		<ProjectReference Include="..\UABEA\UABEAvalonia\UABEAvalonia.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -20,5 +20,6 @@
 			<HintPath>..\Libs\AssetsTools.NET.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+
 
 </Project>
