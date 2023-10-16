@@ -40,7 +40,6 @@ public class ImportDictionaryCommand : Command
 
         AssetBundleHelperBinder assetBundleBinder = new(assetBundleArgument);
         OutputPathBinder outputPathBinder = new(assetBundleArgument, outputArgument, inPlaceOption);
-        LoggerBinder loggerBinder = new();
         
         this.AddArgument(assetBundleArgument);
         this.AddArgument(assetArgument);
@@ -54,8 +53,7 @@ public class ImportDictionaryCommand : Command
             assetArgument,
             dictionaryArgument,
             outputPathBinder,
-            assetBundleBinder, 
-            loggerBinder
+            assetBundleBinder
         );
     }
 
@@ -64,18 +62,17 @@ public class ImportDictionaryCommand : Command
         string assetName,
         FileInfo dictionaryPath,
         FileInfo outputPath,
-        AssetBundleHelper bundleHelper,
-        ILogger logger
+        AssetBundleHelper bundleHelper
     )
     {
         AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
 
-        logger.LogInformation("Importing file {file} over asset {asset}", dictionaryPath, assetName);
+        Console.WriteLine("Importing file {0} over asset {1}", dictionaryPath, assetName);
         SerializableDictionaryHelper.UpdateFromFile(dictionaryPath.FullName, field);
 
         bundleHelper.UpdateBaseField(assetName, field);
 
-        logger.LogInformation("Writing output to {output}", outputPath);
+        Console.WriteLine("Writing output to {0}", outputPath);
         using FileStream fs = outputPath.OpenWrite();
         bundleHelper.Write(fs);
     }
