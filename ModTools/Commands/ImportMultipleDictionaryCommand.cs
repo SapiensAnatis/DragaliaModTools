@@ -6,22 +6,20 @@ using SerializableDictionaryPlugin;
 
 namespace ModTools.Commands;
 
-public class ImportDictionaryCommand : Command
+public class ImportMultipleDictionaryCommand : Command
 {
-    public ImportDictionaryCommand()
-        : base("import", "Import a single serialized dictionary over an asset.")
+    public ImportMultipleDictionaryCommand()
+        : base("import-multiple", "Import a directory of serializable dictionary files into an asset bundle.")
     {
         Argument<FileInfo> assetBundleArgument =
             new(name: "assetbundle", description: "The path to the asset bundle to open.");
 
-        Argument<string> assetArgument =
-            new(name: "asset", description: "The asset within the bundle to edit.");
-
-        Argument<FileInfo> dictionaryArgument =
-            new(name: "dictionary", description: "The path to the dictionary JSON file to import.");
+        Argument<DirectoryInfo> directoryArgument =
+            new(name: "directory", description: "The directory containing files to import. " +
+                                                "All .json files will be imported over the asset matching their name, sans extension.");
 
         Argument<FileInfo?> outputArgument =
-            new(name: "output", () => null, description: "The desired output path.");
+            new(name: "output", () => null, description: "The desired asset bundle output path.");
 
         Option<bool> inPlaceOption =
             new(name: "--inplace", description: "Specify to modify the file in-place.");
@@ -43,38 +41,40 @@ public class ImportDictionaryCommand : Command
         LoggerBinder loggerBinder = new();
         
         this.AddArgument(assetBundleArgument);
-        this.AddArgument(assetArgument);
-        this.AddArgument(dictionaryArgument);
+        this.AddArgument(directoryArgument);
         this.AddArgument(outputArgument);
         this.AddOption(inPlaceOption);
         
         this.SetHandler(
             DoImport,
             assetBundleArgument,
-            assetArgument,
-            dictionaryArgument,
+            directoryArgument,
             outputPathBinder,
-            assetBundleBinder, 
-            loggerBinder
+            assetBundleBinder,
+            loggerBinder  
         );
     }
 
     private static void DoImport(
         FileInfo assetBundlePath,
-        string assetName,
-        FileInfo dictionaryPath,
+        DirectoryInfo directoryInfo,
         FileInfo outputPath,
         AssetBundleHelper bundleHelper,
         ILogger logger
     )
     {
-        AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
+        foreach (FileInfo file in directoryInfo.GetFiles("*.json", SearchOption.TopDirectoryOnly))
+        {
+            string assetName = Path.GetFileNameWithoutExtension(file.Name);
+            logger.LogInformation("Importing file {file} over asset {asset}", file.Name, assetName);
+            
+            AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
 
-        logger.LogInformation("Importing file {file} over asset {asset}", dictionaryPath, assetName);
-        SerializableDictionaryHelper.UpdateFromFile(dictionaryPath.FullName, field);
+            SerializableDictionaryHelper.UpdateFromFile(file.FullName, field);
 
-        bundleHelper.UpdateBaseField(assetName, field);
-
+            bundleHelper.UpdateBaseField(assetName, field);
+        }
+        
         logger.LogInformation("Writing output to {output}", outputPath);
         using FileStream fs = outputPath.OpenWrite();
         bundleHelper.Write(fs);

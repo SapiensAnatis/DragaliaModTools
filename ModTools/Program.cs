@@ -11,9 +11,10 @@ internal class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        RootCommand rootCommand = new("Serializable dictionary helper.");
+        RootCommand rootCommand = new("Dragalia modding utility.");
 
         rootCommand.AddCommand(new ImportDictionaryCommand());
+        rootCommand.AddCommand(new ImportMultipleDictionaryCommand());
 
         return await rootCommand.InvokeAsync(args);
     }
