@@ -23,6 +23,16 @@ public class AssetBundleHelper : IDisposable
         );
     }
 
+    public static AssetBundleHelper FromData(byte[] data, string path)
+    {
+        MemoryStream bundleMemoryStream = new(data);
+
+        AssetsManager manager = new();
+        BundleFileInstance bundleFileInstance = new(bundleMemoryStream, path, unpackIfPacked: true);
+
+        return new AssetBundleHelper(manager, bundleFileInstance);
+    }
+
     public void Dispose()
     {
         // TODO
@@ -48,7 +58,7 @@ public class AssetBundleHelper : IDisposable
             this.fileInstance.file
         );
 
-        MemoryStream decompStream = new();
+        using MemoryStream decompStream = new();
         using AssetsFileWriter decompWriter = new(decompStream);
         this.bundleInstance.file.Write(decompWriter);
 
