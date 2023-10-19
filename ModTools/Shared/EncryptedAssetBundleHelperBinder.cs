@@ -12,7 +12,10 @@ public class EncryptedAssetBundleHelperBinder(Argument<FileInfo> assetBundleArgu
             assetBundleArgument
         );
 
-        byte[] data = RijndaelHelper.Decrypt(File.ReadAllBytes(assetBundlePath.FullName));
+        Console.WriteLine("Opening and decrypting asset bundle {0}", assetBundlePath);
+
+        byte[] encrypted = File.ReadAllBytes(assetBundlePath.FullName);
+        byte[] data = RijndaelHelper.Decrypt(encrypted);
 
         return AssetBundleHelper.FromData(data, assetBundlePath.FullName);
     }

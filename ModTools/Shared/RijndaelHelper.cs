@@ -1,6 +1,9 @@
-using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Security.Cryptography;
-#pragma warning disable SYSLIB0022 // The Rijndael and RijndaelManaged types are obsolete. Use Aes instead.
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Modes;
+using Org.BouncyCastle.Crypto.Paddings;
+using Org.BouncyCastle.Crypto.Parameters;
 
 namespace ModTools.Shared;
 
@@ -16,32 +19,33 @@ public static class RijndaelHelper
 
     public static byte[] Encrypt(byte[] source)
     {
-        using RijndaelManaged rijndael = new();
-        rijndael.Key = Key;
-        rijndael.IV = Iv;
+        PaddedBufferedBlockCipher cipher = CreateCiper(forEncryption: true);
 
-        ICryptoTransform encryptor = rijndael.CreateEncryptor(rijndael.Key, rijndael.IV);
-        using MemoryStream msEncrypt = new();
-        using CryptoStream csEncrypt = new(msEncrypt, encryptor, CryptoStreamMode.Write);
+        byte[] encrypted = cipher.DoFinal(source);
+        byte[] hash = SHA256.HashData(encrypted);
 
-        csEncrypt.Write(source);
+        byte[] final = new byte[encrypted.Length + hash.Length];
+        encrypted.CopyTo(final, 0);
+        hash.CopyTo(final, encrypted.Length);
 
-        return msEncrypt.ToArray();
+        return final;
     }
 
     public static byte[] Decrypt(byte[] encrypted)
     {
-        using RijndaelManaged rijndael = new();
-        rijndael.Key = Key;
-        rijndael.IV = Iv;
+        PaddedBufferedBlockCipher cipher = CreateCiper(forEncryption: false);
+        return cipher.DoFinal(encrypted[..^32]); // Subtract SHA256 hash
+    }
 
-        ICryptoTransform decryptor = rijndael.CreateDecryptor(rijndael.Key, rijndael.IV);
-        using MemoryStream msDecrypt = new(encrypted);
-        using CryptoStream csDecrypt = new(msDecrypt, decryptor, CryptoStreamMode.Read);
-        using MemoryStream output = new();
+    private static PaddedBufferedBlockCipher CreateCiper(bool forEncryption)
+    {
+        RijndaelEngine engine = new(256);
+        CbcBlockCipher blockCiper = new(engine);
+        PaddedBufferedBlockCipher cipher = new(blockCiper, new Pkcs7Padding());
+        KeyParameter keyParam = new(Key);
+        ParametersWithIV keyParamWithIv = new(keyParam, Iv);
+        cipher.Init(forEncryption, keyParamWithIv);
 
-        csDecrypt.CopyTo(output);
-
-        return output.ToArray();
+        return cipher;
     }
 }

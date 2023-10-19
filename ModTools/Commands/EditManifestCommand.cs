@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Runtime.CompilerServices;
+using AssetsTools.NET;
 using ModTools.Shared;
 
 namespace ModTools.Commands;
@@ -6,13 +8,10 @@ namespace ModTools.Commands;
 public class EditManifestCommand : Command
 {
     public EditManifestCommand()
-        : base("manifest", "Update a file's hash and size in a manifest.")
+        : base("manifest", "Update the master asset's hash and size in a manifest.")
     {
         Argument<FileInfo> manifestArgument =
             new("manifest", description: "Path to the encrypted manifest to update.");
-
-        Argument<string> assetNameArgument =
-            new("assetname", description: "Name of the asset in the manifest to update.");
 
         Argument<FileInfo> assetBundleArgument =
             new("assetbundle", description: "The asset bundle to update with.");
@@ -20,32 +19,54 @@ public class EditManifestCommand : Command
         Argument<FileInfo> outputArgument =
             new("output", description: "The path to save the result to.");
 
-        Option<bool> encryptOption =
-            new("no-reencrypt", description: "Skip re-encrypting the manifest.");
+        Option<bool> debugOption = new("debug", description: "Leave intermediate-stage files.");
+        {
+            IsHidden = true;
+        }
 
         EncryptedAssetBundleHelperBinder manifestBinder = new(manifestArgument);
 
         this.AddArgument(manifestArgument);
-        this.AddArgument(assetNameArgument);
         this.AddArgument(assetBundleArgument);
         this.AddArgument(outputArgument);
-        this.AddOption(encryptOption);
+        this.AddOption(debugOption);
 
-        this.SetHandler(
-            DoEdit,
-            manifestBinder,
-            assetNameArgument,
-            assetBundleArgument,
-            outputArgument,
-            encryptOption
-        );
+        this.SetHandler(DoEdit, manifestBinder, assetBundleArgument, outputArgument, debugOption);
     }
 
     private static void DoEdit(
         AssetBundleHelper manifestHelper,
-        string assetName,
         FileInfo assetBundlePath,
         FileInfo outputPath,
-        bool reEncrypt
-    ) { }
+        bool debug
+    )
+    {
+        AssetTypeValueField manifestField = manifestHelper.GetBaseField("manifest");
+
+        AssetTypeValueField? master = manifestField["categories"]["Array"][0]["assets"]["Array"][0];
+
+        Console.WriteLine(
+            "Updating master hash and size from [{0}, {1}] to [{2}, {3}]",
+            master["hash"].AsString,
+            master["size"].AsInt,
+            assetBundlePath.Name,
+            assetBundlePath.Length
+        );
+
+        master["hash"].AsString = assetBundlePath.Name;
+        master["size"].AsInt = (int)assetBundlePath.Length;
+
+        manifestHelper.UpdateBaseField("manifest", manifestField);
+
+        Console.WriteLine("Encrypting output");
+
+        MemoryStream ms = new();
+        manifestHelper.Write(ms);
+
+        byte[] decrypted = ms.ToArray();
+        byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
+
+        Console.WriteLine("Writing output to {0}", outputPath);
+        File.WriteAllBytes(outputPath.FullName, encrypted);
+    }
 }

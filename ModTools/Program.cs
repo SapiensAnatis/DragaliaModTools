@@ -17,6 +17,7 @@ internal class Program
         rootCommand.AddCommand(new ImportDictionaryCommand());
         rootCommand.AddCommand(new ImportMultipleDictionaryCommand());
         rootCommand.AddCommand(new GetHashCommand());
+        rootCommand.AddCommand(new EditManifestCommand());
 
         return await rootCommand.InvokeAsync(args);
     }

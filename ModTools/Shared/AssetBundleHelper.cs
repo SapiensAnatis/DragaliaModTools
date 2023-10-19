@@ -3,7 +3,7 @@ using AssetsTools.NET;
 
 namespace ModTools;
 
-public class AssetBundleHelper : IDisposable
+public class AssetBundleHelper
 {
     private const int FileIndex = 0;
 
@@ -33,12 +33,6 @@ public class AssetBundleHelper : IDisposable
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
-    public void Dispose()
-    {
-        // TODO
-        GC.SuppressFinalize(this);
-    }
-
     public AssetTypeValueField GetBaseField(string assetName)
     {
         AssetFileInfo fileInfo = this.GetFileInfo(assetName);
@@ -52,7 +46,7 @@ public class AssetBundleHelper : IDisposable
         fileInfo.SetNewData(newField);
     }
 
-    public void Write(FileStream fileStream)
+    public void Write(Stream stream)
     {
         this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[FileIndex].SetNewData(
             this.fileInstance.file
@@ -64,7 +58,7 @@ public class AssetBundleHelper : IDisposable
 
         AssetBundleFile newUncompressedBundle = new();
         newUncompressedBundle.Read(new AssetsFileReader(decompStream));
-        using AssetsFileWriter writer = new(fileStream);
+        using AssetsFileWriter writer = new(stream);
         newUncompressedBundle.Pack(writer, AssetBundleCompressionType.LZ4);
     }
 
