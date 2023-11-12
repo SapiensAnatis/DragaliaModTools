@@ -3,12 +3,12 @@ using System.Runtime.CompilerServices;
 using AssetsTools.NET;
 using ModTools.Shared;
 
-namespace ModTools.Commands;
+namespace ModTools.Commands.Manifest;
 
-public class EditManifestCommand : Command
+public class EditCommand : Command
 {
-    public EditManifestCommand()
-        : base("manifest", "Update the master asset's hash and size in a manifest.")
+    public EditCommand()
+        : base("edit-master", "Update the master asset's hash and size in a manifest.")
     {
         Argument<FileInfo> manifestArgument =
             new("manifest", description: "Path to the encrypted manifest to update.");
@@ -26,10 +26,10 @@ public class EditManifestCommand : Command
 
         EncryptedAssetBundleHelperBinder manifestBinder = new(manifestArgument);
 
-        this.AddArgument(manifestArgument);
-        this.AddArgument(assetBundleArgument);
-        this.AddArgument(outputArgument);
-        this.AddOption(debugOption);
+        AddArgument(manifestArgument);
+        AddArgument(assetBundleArgument);
+        AddArgument(outputArgument);
+        AddOption(debugOption);
 
         this.SetHandler(DoEdit, manifestBinder, assetBundleArgument, outputArgument, debugOption);
     }

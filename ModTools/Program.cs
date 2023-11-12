@@ -5,6 +5,7 @@ using System.CommandLine.Binding;
 using System.Data;
 using System.Runtime.CompilerServices;
 using ModTools.Commands;
+using ModTools.Commands.Manifest;
 
 namespace ModTools;
 
@@ -17,7 +18,8 @@ internal class Program
         rootCommand.AddCommand(new ImportDictionaryCommand());
         rootCommand.AddCommand(new ImportMultipleDictionaryCommand());
         rootCommand.AddCommand(new GetHashCommand());
-        rootCommand.AddCommand(new EditManifestCommand());
+        rootCommand.AddCommand(new ManifestCommand());
+        rootCommand.AddCommand(new ConvertBundleCommand());
 
         return await rootCommand.InvokeAsync(args);
     }

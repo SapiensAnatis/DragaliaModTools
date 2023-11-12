@@ -1,5 +1,6 @@
 ﻿using AssetsTools.NET.Extra;
 using AssetsTools.NET;
+using ModTools.Shared;
 
 namespace ModTools;
 
@@ -9,14 +10,15 @@ public class AssetBundleHelper
 
     private readonly AssetsManager manager;
     private readonly BundleFileInstance bundleInstance;
-    private readonly AssetsFileInstance fileInstance;
+
+    public AssetsFileInstance FileInstance { get; }
 
     public AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
         this.manager = manager;
         this.bundleInstance = bundleInstance;
 
-        this.fileInstance = manager.LoadAssetsFileFromBundle(
+        this.FileInstance = manager.LoadAssetsFileFromBundle(
             bundleInstance,
             index: FileIndex,
             loadDeps: false
@@ -37,7 +39,12 @@ public class AssetBundleHelper
     {
         AssetFileInfo fileInfo = this.GetFileInfo(assetName);
 
-        return this.manager.GetBaseField(this.fileInstance, fileInfo);
+        return this.GetBaseField(fileInfo);
+    }
+
+    public AssetTypeValueField GetBaseField(AssetFileInfo fileInfo)
+    {
+        return this.manager.GetBaseField(this.FileInstance, fileInfo);
     }
 
     public void UpdateBaseField(string assetName, AssetTypeValueField newField)
@@ -49,7 +56,7 @@ public class AssetBundleHelper
     public void Write(Stream stream)
     {
         this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[FileIndex].SetNewData(
-            this.fileInstance.file
+            this.FileInstance.file
         );
 
         using MemoryStream decompStream = new();
@@ -62,14 +69,25 @@ public class AssetBundleHelper
         newUncompressedBundle.Pack(writer, AssetBundleCompressionType.LZ4);
     }
 
+    public void WriteEncrypted(Stream stream)
+    {
+        MemoryStream ms = new();
+        this.Write(ms);
+
+        byte[] decrypted = ms.ToArray();
+        byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
+
+        stream.Write(encrypted);
+    }
+
     private AssetFileInfo GetFileInfo(string assetName)
     {
-        AssetFileInfo? assetFileInfo = this.fileInstance.file
+        AssetFileInfo? assetFileInfo = this.FileInstance.file
             .GetAssetsOfType(AssetClassID.MonoBehaviour)
             .FirstOrDefault(fileInfo =>
             {
                 AssetTypeValueField baseField = this.manager.GetBaseField(
-                    this.fileInstance,
+                    this.FileInstance,
                     fileInfo
                 );
 
