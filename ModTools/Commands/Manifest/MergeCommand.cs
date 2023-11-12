@@ -52,41 +52,41 @@ public class MergeCommand : Command
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
         AssetTypeValueField sourceBaseField = sourceHelper.GetBaseField("manifest");
 
-        // We are not interested in updating the first category which is just masterasset
-        AssetTypeValueField targetOthersCategory = targetBaseField["categories"]["Array"][1];
-        AssetTypeValueField sourceOthersCategory = sourceBaseField["categories"]["Array"][1];
+        MergeCategory(
+            targetBaseField,
+            sourceBaseField,
+            (field) => field["categories"]["Array"][1]["assets"]["Array"]
+        );
 
-        HashSet<AssetTypeValueField> assetsToAdd =
-            new(sourceOthersCategory["assets"]["Array"], ManifestAssetComparer.Instance);
-
-        assetsToAdd.ExceptWith(targetOthersCategory["assets"]["Array"]);
-
-        Console.WriteLine($"Adding {assetsToAdd.Count} new assets to 'others' category");
-
-        // TODO: Conversion
-        foreach (AssetTypeValueField toAdd in assetsToAdd)
-        {
-            targetOthersCategory.Children.Add(toAdd);
-        }
-
-        AssetTypeValueField targetRaws = targetBaseField["rawAssets"]["Array"];
-        AssetTypeValueField sourceRaws = sourceBaseField["rawAssets"]["Array"];
-        HashSet<AssetTypeValueField> rawAssetsToAdd =
-            new(targetRaws, ManifestAssetComparer.Instance);
-
-        rawAssetsToAdd.ExceptWith(sourceRaws);
-
-        Console.WriteLine($"Adding {rawAssetsToAdd.Count} new assets to 'rawAssets'");
-
-        foreach (AssetTypeValueField toAdd in assetsToAdd)
-        {
-            targetRaws.Children.Add(toAdd);
-        }
+        MergeCategory(targetBaseField, sourceBaseField, (field) => field["rawAssets"]["Array"]);
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
         Console.WriteLine("Writing output to {0}", output);
         targetHelper.WriteEncrypted(output.OpenWrite());
+    }
+
+    private static void MergeCategory(
+        AssetTypeValueField target,
+        AssetTypeValueField source,
+        Func<AssetTypeValueField, AssetTypeValueField> path,
+        Action<AssetTypeValueField>? process = null
+    )
+    {
+        AssetTypeValueField targetAssets = path.Invoke(target);
+        AssetTypeValueField sourceAssets = path.Invoke(source);
+        HashSet<AssetTypeValueField> assetsToAdd =
+            new(sourceAssets, ManifestAssetComparer.Instance);
+
+        assetsToAdd.ExceptWith(targetAssets);
+
+        Console.WriteLine($"Adding {assetsToAdd.Count} new assets");
+
+        foreach (AssetTypeValueField toAdd in assetsToAdd)
+        {
+            process?.Invoke(toAdd);
+            targetAssets.Children.Add(toAdd);
+        }
     }
 }
 
