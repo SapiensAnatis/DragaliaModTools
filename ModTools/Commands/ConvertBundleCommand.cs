@@ -28,16 +28,6 @@ public class ConvertBundleCommand : Command
         AssetBundleHelper bundleHelper
     )
     {
-        bundleHelper.FileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Android;
-
-        if (
-            bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.Shader).Any()
-            || bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Any()
-        )
-        {
-            throw new NotSupportedException("Cannot convert shaders");
-        }
-
-        bundleHelper.Write(outputPath.OpenWrite());
+        BundleConversionHelper.Convert(bundleHelper, outputPath);
     }
 }

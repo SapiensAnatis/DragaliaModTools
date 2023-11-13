@@ -2,6 +2,7 @@
 using ModTools.Shared;
 using System.CommandLine;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace ModTools.Commands.Manifest;
 
@@ -10,12 +11,13 @@ public class MergeCommand : Command
     public MergeCommand()
         : base(
             "merge",
-            "Update the manifest [target] by adding any files only present in [source]."
+            "Update the manifest <target> by adding any files only present in <source>."
         )
     {
-        Argument<FileInfo> targetArgument = new("target", "The path to the target manifest.");
-        Argument<FileInfo> sourceArgument = new("source", "The path to the source manifest.");
-        Argument<FileInfo> outputArgument = new("output", "The path to write the result to.");
+        Argument<FileInfo> targetArgument = new("target", "Path to the target manifest.");
+        Argument<FileInfo> sourceArgument = new("source", "Path to the source manifest.");
+        Argument<DirectoryInfo> outputArgument =
+            new("output", "Path to write the result and any converted bundles to.");
         Argument<DirectoryInfo> directoryArgument =
             new("assetDirectory", "Path to a directory to source bundle files from.");
 
@@ -33,6 +35,7 @@ public class MergeCommand : Command
 
         this.SetHandler(
             DoMerge,
+            targetArgument,
             targetBinder,
             sourceBinder,
             outputArgument,
@@ -42,9 +45,10 @@ public class MergeCommand : Command
     }
 
     private static void DoMerge(
+        FileInfo inputPath,
         AssetBundleHelper targetHelper,
         AssetBundleHelper sourceHelper,
-        FileInfo output,
+        DirectoryInfo output,
         DirectoryInfo assetDirectory,
         TargetPlatform? conversion
     )
@@ -52,41 +56,47 @@ public class MergeCommand : Command
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
         AssetTypeValueField sourceBaseField = sourceHelper.GetBaseField("manifest");
 
-        MergeCategory(
+        List<AssetTypeValueField> othersToAdd = GetDiff(
             targetBaseField,
             sourceBaseField,
             (field) => field["categories"]["Array"][1]["assets"]["Array"]
         );
 
-        MergeCategory(targetBaseField, sourceBaseField, (field) => field["rawAssets"]["Array"]);
+        targetBaseField["categories"]["Array"][1]["assets"]["Array"].Children.AddRange(othersToAdd);
+
+        List<AssetTypeValueField> rawsToAdd = GetDiff(
+            targetBaseField,
+            sourceBaseField,
+            (field) => field["rawAssets"]["Array"]
+        );
+
+        targetBaseField["rawAssets"]["Array"].Children.AddRange(othersToAdd);
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
         Console.WriteLine("Writing output to {0}", output);
-        targetHelper.WriteEncrypted(output.OpenWrite());
+
+        string outputPath = Path.Join(output.FullName, inputPath.Name);
+        targetHelper.WriteEncrypted(File.OpenWrite(outputPath));
     }
 
-    private static void MergeCategory(
+    private static List<AssetTypeValueField> GetDiff(
         AssetTypeValueField target,
         AssetTypeValueField source,
         Func<AssetTypeValueField, AssetTypeValueField> path,
-        Action<AssetTypeValueField>? process = null
+        [CallerArgumentExpression(nameof(path))] string? pathName = null
     )
     {
         AssetTypeValueField targetAssets = path.Invoke(target);
         AssetTypeValueField sourceAssets = path.Invoke(source);
-        HashSet<AssetTypeValueField> assetsToAdd =
-            new(sourceAssets, ManifestAssetComparer.Instance);
 
-        assetsToAdd.ExceptWith(targetAssets);
+        List<AssetTypeValueField> assetsToAdd = sourceAssets
+            .Except(targetAssets, ManifestAssetComparer.Instance)
+            .ToList();
 
-        Console.WriteLine($"Adding {assetsToAdd.Count} new assets");
+        Console.WriteLine($"Found {assetsToAdd.Count} assets to add to {pathName}");
 
-        foreach (AssetTypeValueField toAdd in assetsToAdd)
-        {
-            process?.Invoke(toAdd);
-            targetAssets.Children.Add(toAdd);
-        }
+        return assetsToAdd;
     }
 }
 

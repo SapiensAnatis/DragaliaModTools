@@ -1,3 +1,4 @@
+using ModTools.Shared;
 using System.CommandLine;
 using System.Security.Cryptography;
 
@@ -18,11 +19,7 @@ public class GetHashCommand : Command
 
     private static void DoHash(FileInfo assetBundle)
     {
-        SHA256 hasher = SHA256.Create();
-
-        byte[] hash = hasher.ComputeHash(File.ReadAllBytes(assetBundle.FullName));
-        string hashName = OtpNet.Base32Encoding.ToString(hash)[..52];
-
+        string hashName = HashHelper.GetHash(assetBundle);
         Console.WriteLine(hashName);
     }
 }
