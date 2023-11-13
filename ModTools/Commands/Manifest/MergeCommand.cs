@@ -1,6 +1,7 @@
 ﻿using AssetsTools.NET;
 using ModTools.Shared;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -70,14 +71,20 @@ public class MergeCommand : Command
             (field) => field["rawAssets"]["Array"]
         );
 
-        targetBaseField["rawAssets"]["Array"].Children.AddRange(othersToAdd);
+        targetBaseField["rawAssets"]["Array"].Children.AddRange(rawsToAdd);
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
-        Console.WriteLine("Writing output to {0}", output);
-
         string outputPath = Path.Join(output.FullName, inputPath.Name);
-        targetHelper.WriteEncrypted(File.OpenWrite(outputPath));
+
+        MemoryStream ms = new();
+        targetHelper.Write(ms);
+
+        byte[] decrypted = ms.ToArray();
+        byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
+
+        Console.WriteLine("Writing output to {0}", outputPath);
+        File.WriteAllBytes(outputPath, encrypted);
     }
 
     private static List<AssetTypeValueField> GetDiff(
