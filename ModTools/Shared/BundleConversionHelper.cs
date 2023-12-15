@@ -11,7 +11,7 @@ namespace ModTools.Shared;
 
 public static class BundleConversionHelper
 {
-    public static void Convert(FileInfo input, FileInfo output)
+    public static void ConvertToIos(FileInfo input, FileInfo output)
     {
         AssetBundleHelper bundleHelper;
         using (FileStream inputRead = input.OpenRead())
@@ -22,18 +22,20 @@ public static class BundleConversionHelper
             );
         }
 
-        Convert(bundleHelper, output);
+        ConvertToIos(bundleHelper, output);
     }
 
-    public static void Convert(AssetBundleHelper bundleHelper, FileInfo output)
+    public static void ConvertToIos(AssetBundleHelper bundleHelper, FileInfo output)
     {
-        bundleHelper.FileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Android;
+        bundleHelper.FileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Ios;
         if (
             bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.Shader).Any()
             || bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Any()
         )
         {
-            throw new NotSupportedException("Cannot convert shaders");
+            throw new NotSupportedException(
+                $"Cannot convert shader in file {bundleHelper.FileInstance.path}"
+            );
         }
 
         using FileStream outputWrite = output.OpenWrite();

@@ -22,8 +22,7 @@ public class MergeCommand : Command
         Argument<DirectoryInfo> directoryArgument =
             new("assetDirectory", "Path to a directory to source bundle files from.");
 
-        Option<TargetPlatform?> convertOption =
-            new("convert", "The target platform to change any files to.");
+        Option<bool> convertOption = new("--convert", "Whether to convert the files to iOS.");
 
         EncryptedAssetBundleHelperBinder targetBinder = new(targetArgument);
         EncryptedAssetBundleHelperBinder sourceBinder = new(sourceArgument);
@@ -51,7 +50,7 @@ public class MergeCommand : Command
         AssetBundleHelper sourceHelper,
         DirectoryInfo output,
         DirectoryInfo assetDirectory,
-        TargetPlatform? conversion
+        bool conversion
     )
     {
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
@@ -60,15 +59,26 @@ public class MergeCommand : Command
         List<AssetTypeValueField> othersToAdd = GetDiff(
             targetBaseField,
             sourceBaseField,
-            (field) => field["categories"]["Array"][1]["assets"]["Array"]
+            (manifest) => manifest["categories"]["Array"][1]["assets"]["Array"]
         );
+
+        if (conversion)
+        {
+            DirectoryInfo convertedFolder = new(Path.Join(output.FullName, "assets"));
+            Directory.CreateDirectory(convertedFolder.FullName);
+
+            foreach (AssetTypeValueField asset in othersToAdd)
+            {
+                PerformConversion(asset, assetDirectory, convertedFolder);
+            }
+        }
 
         targetBaseField["categories"]["Array"][1]["assets"]["Array"].Children.AddRange(othersToAdd);
 
         List<AssetTypeValueField> rawsToAdd = GetDiff(
             targetBaseField,
             sourceBaseField,
-            (field) => field["rawAssets"]["Array"]
+            (manifest) => manifest["rawAssets"]["Array"]
         );
 
         targetBaseField["rawAssets"]["Array"].Children.AddRange(rawsToAdd);
@@ -104,6 +114,39 @@ public class MergeCommand : Command
         Console.WriteLine($"Found {assetsToAdd.Count} assets to add to {pathName}");
 
         return assetsToAdd;
+    }
+
+    private static string GetAssetPath(string hash)
+    {
+        return Path.Join(hash[..2], hash);
+    }
+
+    private static void PerformConversion(
+        AssetTypeValueField asset,
+        DirectoryInfo assetDirectory,
+        DirectoryInfo outputConversionDirectory
+    )
+    {
+        string hash = asset["hash"].AsString;
+        FileInfo sourceFileInfo = new(Path.Join(assetDirectory.FullName, GetAssetPath(hash)));
+
+        string tempFileName = Path.GetTempFileName();
+        FileInfo outputFileInfo = new(tempFileName);
+
+        BundleConversionHelper.ConvertToIos(sourceFileInfo, outputFileInfo);
+        string newHash = HashHelper.GetHash(outputFileInfo);
+        // Console.WriteLine($"Converted {hash} to {newHash}");
+
+        string newPath = Path.Join(outputConversionDirectory.FullName, GetAssetPath(newHash));
+        string newDirectory =
+            Path.GetDirectoryName(newPath)
+            ?? throw new InvalidOperationException("Failed to get directory name");
+
+        Directory.CreateDirectory(newDirectory);
+
+        File.Copy(tempFileName, newPath, overwrite: true);
+
+        asset["hash"].AsString = newHash;
     }
 }
 

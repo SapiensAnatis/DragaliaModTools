@@ -28,6 +28,6 @@ public class ConvertBundleCommand : Command
         AssetBundleHelper bundleHelper
     )
     {
-        BundleConversionHelper.Convert(bundleHelper, outputPath);
+        BundleConversionHelper.ConvertToIos(bundleHelper, outputPath);
     }
 }

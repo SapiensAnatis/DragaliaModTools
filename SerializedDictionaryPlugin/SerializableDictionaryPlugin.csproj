@@ -5,7 +5,6 @@
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<BaseOutputPath></BaseOutputPath>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<RunPostBuildEvent>Always</RunPostBuildEvent>
 	</PropertyGroup>
@@ -17,7 +16,7 @@
 
 	<ItemGroup>
 		<Reference Include="AssetsTools.NET">
-			<HintPath>..\Libs\AssetsTools.NET.dll</HintPath>
+			<HintPath>..\UABEA\Libs\AssetsTools.NET.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
