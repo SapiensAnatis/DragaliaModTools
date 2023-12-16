@@ -1,4 +1,5 @@
-﻿using AssetsTools.NET.Extra;
+﻿using System.Diagnostics;
+using AssetsTools.NET.Extra;
 using AssetsTools.NET;
 using ModTools.Shared;
 
@@ -6,23 +7,37 @@ namespace ModTools;
 
 public class AssetBundleHelper
 {
-    private const int FileIndex = 0;
-
     private readonly AssetsManager manager;
     private readonly BundleFileInstance bundleInstance;
 
-    public AssetsFileInstance FileInstance { get; }
+    public List<AssetsFileInstance> FileInstances { get; } = new();
 
     public AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
         this.manager = manager;
         this.bundleInstance = bundleInstance;
 
-        this.FileInstance = manager.LoadAssetsFileFromBundle(
-            bundleInstance,
-            index: FileIndex,
-            loadDeps: false
-        );
+        foreach (
+            (string name, int idx) in bundleInstance.file
+                .GetAllFileNames()
+                .Select((x, idx) => (x, idx))
+        )
+        {
+            AssetsFileInstance instance = manager.LoadAssetsFileFromBundle(
+                bundleInstance,
+                index: idx,
+                loadDeps: false
+            );
+
+            if (instance == null)
+            {
+                // Probably a .resS file
+                Console.WriteLine($"Skipping file instance {name} at index {idx}");
+                continue;
+            }
+
+            this.FileInstances.Add(instance);
+        }
     }
 
     public static AssetBundleHelper FromData(byte[] data, string path)
@@ -35,29 +50,32 @@ public class AssetBundleHelper
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
-    public AssetTypeValueField GetBaseField(string assetName)
+    public AssetTypeValueField GetBaseField(string assetName, int fileIndex = 0)
     {
-        AssetFileInfo fileInfo = this.GetFileInfo(assetName);
+        AssetFileInfo fileInfo = this.GetFileInfo(assetName, fileIndex);
 
         return this.GetBaseField(fileInfo);
     }
 
-    public AssetTypeValueField GetBaseField(AssetFileInfo fileInfo)
+    public AssetTypeValueField GetBaseField(AssetFileInfo fileInfo, int fileIndex = 0)
     {
-        return this.manager.GetBaseField(this.FileInstance, fileInfo);
+        return this.manager.GetBaseField(this.FileInstances[fileIndex], fileInfo);
     }
 
-    public void UpdateBaseField(string assetName, AssetTypeValueField newField)
+    public void UpdateBaseField(string assetName, AssetTypeValueField newField, int fileIndex = 0)
     {
-        AssetFileInfo fileInfo = this.GetFileInfo(assetName);
+        AssetFileInfo fileInfo = this.GetFileInfo(assetName, fileIndex);
         fileInfo.SetNewData(newField);
     }
 
     public void Write(Stream stream)
     {
-        this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[FileIndex].SetNewData(
-            this.FileInstance.file
-        );
+        for (int i = 0; i < FileInstances.Count; i++)
+        {
+            this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[i].SetNewData(
+                this.FileInstances[i].file
+            );
+        }
 
         using MemoryStream decompStream = new();
         using AssetsFileWriter decompWriter = new(decompStream);
@@ -80,14 +98,14 @@ public class AssetBundleHelper
         stream.Write(encrypted);
     }
 
-    private AssetFileInfo GetFileInfo(string assetName)
+    private AssetFileInfo GetFileInfo(string assetName, int fileIndex)
     {
-        AssetFileInfo? assetFileInfo = this.FileInstance.file
+        AssetFileInfo? assetFileInfo = this.FileInstances[fileIndex].file
             .GetAssetsOfType(AssetClassID.MonoBehaviour)
             .FirstOrDefault(fileInfo =>
             {
                 AssetTypeValueField baseField = this.manager.GetBaseField(
-                    this.FileInstance,
+                    this.FileInstances[fileIndex],
                     fileInfo
                 );
 

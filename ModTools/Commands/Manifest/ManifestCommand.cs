@@ -14,5 +14,6 @@ public class ManifestCommand : Command
     {
         this.AddCommand(new EditCommand());
         this.AddCommand(new MergeCommand());
+        this.AddCommand(new DecryptCommand());
     }
 }

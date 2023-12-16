@@ -23,15 +23,18 @@ public static class BundleConversionHelper
 
     public static void ConvertToIos(AssetBundleHelper bundleHelper, FileInfo output)
     {
-        bundleHelper.FileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Ios;
-        if (
-            bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.Shader).Any()
-            || bundleHelper.FileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Any()
-        )
+        foreach (AssetsFileInstance fileInstance in bundleHelper.FileInstances)
         {
-            throw new NotSupportedException(
-                $"Cannot convert shader in file {bundleHelper.FileInstance.path}"
-            );
+            fileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Ios;
+            if (
+                fileInstance.file.GetAssetsOfType(AssetClassID.Shader).Any()
+                || fileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Any()
+            )
+            {
+                throw new NotSupportedException(
+                    $"Cannot convert shader in file {fileInstance.path}"
+                );
+            }
         }
 
         using FileStream outputWrite = output.OpenWrite();

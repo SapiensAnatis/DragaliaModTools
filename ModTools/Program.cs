@@ -20,6 +20,7 @@ internal class Program
         rootCommand.AddCommand(new GetHashCommand());
         rootCommand.AddCommand(new ManifestCommand());
         rootCommand.AddCommand(new ConvertBundleCommand());
+        rootCommand.AddCommand(new CheckTargetCommand());
 
         return await rootCommand.InvokeAsync(args);
     }
