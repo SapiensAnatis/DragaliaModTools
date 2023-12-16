@@ -13,14 +13,10 @@ public static class BundleConversionHelper
 {
     public static void ConvertToIos(FileInfo input, FileInfo output)
     {
-        AssetBundleHelper bundleHelper;
-        using (FileStream inputRead = input.OpenRead())
-        {
-            bundleHelper = AssetBundleHelper.FromData(
-                File.ReadAllBytes(input.FullName),
-                input.FullName
-            );
-        }
+        AssetBundleHelper bundleHelper = AssetBundleHelper.FromData(
+            File.ReadAllBytes(input.FullName),
+            input.FullName
+        );
 
         ConvertToIos(bundleHelper, output);
     }

@@ -1,7 +1,6 @@
 ﻿using AssetsTools.NET;
 using ModTools.Shared;
 using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -18,9 +17,11 @@ public class MergeCommand : Command
         Argument<FileInfo> targetArgument = new("target", "Path to the target manifest.");
         Argument<FileInfo> sourceArgument = new("source", "Path to the source manifest.");
         Argument<DirectoryInfo> outputArgument =
-            new("output", "Path to write the result and any converted bundles to.");
-        Argument<DirectoryInfo> directoryArgument =
-            new("assetDirectory", "Path to a directory to source bundle files from.");
+            new("output", "Path to a directory to write the manifest result to.");
+        Argument<DirectoryInfo> outputBundleArgument =
+            new("outputBundle", "Path to a directory to write new bundles to.");
+        Option<DirectoryInfo[]> assetDirectoryOption =
+            new("--assetDirectory", "Path to a directory to source bundle files from.");
 
         Option<bool> convertOption = new("--convert", "Whether to convert the files to iOS.");
 
@@ -29,17 +30,36 @@ public class MergeCommand : Command
 
         AddArgument(targetArgument);
         AddArgument(sourceArgument);
-        AddArgument(directoryArgument);
         AddArgument(outputArgument);
+        AddArgument(outputBundleArgument);
+        AddOption(assetDirectoryOption);
         AddOption(convertOption);
 
         this.SetHandler(
-            DoMerge,
+            (
+                inputPath,
+                targetHelper,
+                sourceHelper,
+                output,
+                bundleOutput,
+                assetDirectories,
+                conversion
+            ) =>
+                DoMerge(
+                    inputPath,
+                    targetHelper,
+                    sourceHelper,
+                    output,
+                    bundleOutput,
+                    assetDirectories,
+                    conversion
+                ),
             targetArgument,
             targetBinder,
             sourceBinder,
             outputArgument,
-            directoryArgument,
+            outputBundleArgument,
+            assetDirectoryOption,
             convertOption
         );
     }
@@ -48,8 +68,9 @@ public class MergeCommand : Command
         FileInfo inputPath,
         AssetBundleHelper targetHelper,
         AssetBundleHelper sourceHelper,
-        DirectoryInfo output,
-        DirectoryInfo assetDirectory,
+        DirectoryInfo outputManifestDir,
+        DirectoryInfo outputBundleDir,
+        DirectoryInfo[] assetDirectories,
         bool conversion
     )
     {
@@ -62,14 +83,23 @@ public class MergeCommand : Command
             (manifest) => manifest["categories"]["Array"][1]["assets"]["Array"]
         );
 
-        if (conversion)
-        {
-            DirectoryInfo convertedFolder = new(Path.Join(output.FullName, "assets"));
-            Directory.CreateDirectory(convertedFolder.FullName);
+        Directory.CreateDirectory(outputBundleDir.FullName);
 
-            foreach (AssetTypeValueField asset in othersToAdd)
+        foreach (AssetTypeValueField asset in othersToAdd)
+        {
+            string hash = asset["hash"].AsString;
+            string assetPath = GetAssetPath(hash);
+            FileInfo sourcePath = GetSourceFile(assetPath, assetDirectories);
+
+            if (conversion)
             {
-                PerformConversion(asset, assetDirectory, convertedFolder);
+                (FileInfo converted, string newHash) = PerformConversion(sourcePath, asset);
+                string newAssetPath = GetAssetPath(newHash);
+                CopyToOutput(converted, outputBundleDir, newAssetPath);
+            }
+            else
+            {
+                CopyToOutput(sourcePath, outputBundleDir, assetPath);
             }
         }
 
@@ -85,7 +115,7 @@ public class MergeCommand : Command
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
-        string outputPath = Path.Join(output.FullName, inputPath.Name);
+        string outputPath = Path.Join(outputManifestDir.FullName, inputPath.Name);
 
         MemoryStream ms = new();
         targetHelper.Write(ms);
@@ -121,32 +151,49 @@ public class MergeCommand : Command
         return Path.Join(hash[..2], hash);
     }
 
-    private static void PerformConversion(
-        AssetTypeValueField asset,
-        DirectoryInfo assetDirectory,
-        DirectoryInfo outputConversionDirectory
+    private static (FileInfo convertedPath, string newHash) PerformConversion(
+        FileInfo sourcePath,
+        AssetTypeValueField asset
     )
     {
-        string hash = asset["hash"].AsString;
-        FileInfo sourceFileInfo = new(Path.Join(assetDirectory.FullName, GetAssetPath(hash)));
-
         string tempFileName = Path.GetTempFileName();
         FileInfo outputFileInfo = new(tempFileName);
 
-        BundleConversionHelper.ConvertToIos(sourceFileInfo, outputFileInfo);
+        BundleConversionHelper.ConvertToIos(sourcePath, outputFileInfo);
         string newHash = HashHelper.GetHash(outputFileInfo);
-        // Console.WriteLine($"Converted {hash} to {newHash}");
+        asset["hash"].AsString = newHash;
 
-        string newPath = Path.Join(outputConversionDirectory.FullName, GetAssetPath(newHash));
+        return (new FileInfo(tempFileName), newHash);
+    }
+
+    private static void CopyToOutput(
+        FileInfo sourcePath,
+        DirectoryInfo outputDirectory,
+        string assetPath
+    )
+    {
+        string newPath = Path.Join(outputDirectory.FullName, assetPath);
         string newDirectory =
             Path.GetDirectoryName(newPath)
             ?? throw new InvalidOperationException("Failed to get directory name");
 
         Directory.CreateDirectory(newDirectory);
 
-        File.Copy(tempFileName, newPath, overwrite: true);
+        File.Copy(sourcePath.FullName, newPath, overwrite: true);
+    }
 
-        asset["hash"].AsString = newHash;
+    private static FileInfo GetSourceFile(string assetPath, IEnumerable<DirectoryInfo> directories)
+    {
+        foreach (DirectoryInfo directory in directories)
+        {
+            string path = Path.Join(directory.FullName, assetPath);
+            if (File.Exists(path))
+            {
+                return new FileInfo(path);
+            }
+        }
+
+        throw new IOException($"Failed to find asset {assetPath} in any configured directory");
     }
 }
 
