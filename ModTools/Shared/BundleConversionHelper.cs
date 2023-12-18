@@ -13,7 +13,7 @@ public static class BundleConversionHelper
 {
     public static void ConvertToIos(FileInfo input, FileInfo output)
     {
-        AssetBundleHelper bundleHelper = AssetBundleHelper.FromData(
+        using AssetBundleHelper bundleHelper = AssetBundleHelper.FromData(
             File.ReadAllBytes(input.FullName),
             input.FullName
         );
@@ -31,8 +31,8 @@ public static class BundleConversionHelper
                 || fileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Any()
             )
             {
-                throw new NotSupportedException(
-                    $"Cannot convert shader in file {fileInstance.path}"
+                Console.WriteLine(
+                    $"[WARNING] Shaders detected in asset {fileInstance.name} of bundle {bundleHelper.Path}"
                 );
             }
         }

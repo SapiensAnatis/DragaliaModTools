@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using AssetsTools.NET.Extra;
+using ModTools.Shared;
 
 namespace ModTools.Commands;
 

@@ -3,6 +3,7 @@ using ModTools.Shared;
 using System.CommandLine;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using AssetsTools.NET.Extra;
 
 namespace ModTools.Commands.Manifest;
 
@@ -85,11 +86,24 @@ public class MergeCommand : Command
 
         Directory.CreateDirectory(outputBundleDir.FullName);
 
-        foreach (AssetTypeValueField asset in othersToAdd)
+        var assets = targetBaseField["categories"]["Array"][1]["assets"]["Array"].Children;
+
+        var normalAsset = assets.First();
+        var newArray = ValueBuilder.DefaultValueFieldFromTemplate(
+            normalAsset["assets"].TemplateField
+        );
+
+        foreach ((AssetTypeValueField asset, int idx) in othersToAdd.Select((i, idx) => (i, idx)))
         {
             string hash = asset["hash"].AsString;
             string assetPath = GetAssetPath(hash);
             FileInfo sourcePath = GetSourceFile(assetPath, assetDirectories);
+
+            if (asset["assets"].IsDummy)
+            {
+                // This probably needs to list the assets that the asset provides
+                asset.Children.Add(newArray);
+            }
 
             if (conversion)
             {
@@ -199,7 +213,7 @@ public class MergeCommand : Command
 
 file class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
 {
-    public static ManifestAssetComparer Instance = new();
+    public static ManifestAssetComparer Instance { get; } = new();
 
     public bool Equals(AssetTypeValueField? x, AssetTypeValueField? y)
     {

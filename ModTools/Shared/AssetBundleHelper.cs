@@ -1,16 +1,16 @@
-﻿using System.Diagnostics;
+﻿using AssetsTools.NET;
 using AssetsTools.NET.Extra;
-using AssetsTools.NET;
-using ModTools.Shared;
 
-namespace ModTools;
+namespace ModTools.Shared;
 
-public class AssetBundleHelper
+public class AssetBundleHelper : IDisposable
 {
     private readonly AssetsManager manager;
     private readonly BundleFileInstance bundleInstance;
 
     public List<AssetsFileInstance> FileInstances { get; } = new();
+
+    public string Path => this.bundleInstance.path;
 
     public AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
@@ -23,11 +23,22 @@ public class AssetBundleHelper
                 .Select((x, idx) => (x, idx))
         )
         {
-            AssetsFileInstance instance = manager.LoadAssetsFileFromBundle(
-                bundleInstance,
-                index: idx,
-                loadDeps: false
-            );
+            AssetsFileInstance instance;
+            try
+            {
+                instance = manager.LoadAssetsFileFromBundle(
+                    bundleInstance,
+                    index: idx,
+                    loadDeps: false
+                );
+            }
+            catch
+            {
+                Console.Error.WriteLine(
+                    $"[ERROR] Failed to load file instance {name} at index {idx}"
+                );
+                continue;
+            }
 
             if (instance == null)
             {
@@ -120,5 +131,11 @@ public class AssetBundleHelper
         }
 
         return assetFileInfo;
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        this.bundleInstance.BundleStream.Dispose();
     }
 }
