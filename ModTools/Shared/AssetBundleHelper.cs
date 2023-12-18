@@ -61,6 +61,13 @@ public class AssetBundleHelper : IDisposable
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
+    public List<AssetTypeValueField> GetAllBaseFields(int fileIndex = 0)
+    {
+        return this.FileInstances[fileIndex].file.AssetInfos
+            .Select(x => this.manager.GetBaseField(this.FileInstances[fileIndex], x))
+            .ToList();
+    }
+
     public AssetTypeValueField GetBaseField(string assetName, int fileIndex = 0)
     {
         AssetFileInfo fileInfo = this.GetFileInfo(assetName, fileIndex);

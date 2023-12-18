@@ -89,11 +89,8 @@ public class MergeCommand : Command
         var assets = targetBaseField["categories"]["Array"][1]["assets"]["Array"].Children;
 
         var normalAsset = assets.First();
-        var newArray = ValueBuilder.DefaultValueFieldFromTemplate(
-            normalAsset["assets"].TemplateField
-        );
 
-        foreach ((AssetTypeValueField asset, int idx) in othersToAdd.Select((i, idx) => (i, idx)))
+        foreach (AssetTypeValueField asset in othersToAdd)
         {
             string hash = asset["hash"].AsString;
             string assetPath = GetAssetPath(hash);
@@ -101,8 +98,12 @@ public class MergeCommand : Command
 
             if (asset["assets"].IsDummy)
             {
-                // This probably needs to list the assets that the asset provides
+                var newArray = ValueBuilder.DefaultValueFieldFromTemplate(
+                    normalAsset["assets"].TemplateField
+                );
                 asset.Children.Add(newArray);
+
+                PopulateAssetArray(newArray, sourcePath);
             }
 
             if (conversion)
@@ -209,6 +210,41 @@ public class MergeCommand : Command
 
         throw new IOException($"Failed to find asset {assetPath} in any configured directory");
     }
+
+    private static void PopulateAssetArray(AssetTypeValueField newAssetVector, FileInfo bundlePath)
+    {
+        var newArray = newAssetVector["Array"];
+        byte[] bundleData = File.ReadAllBytes(bundlePath.FullName);
+
+        using AssetBundleHelper helper = AssetBundleHelper.FromData(
+            bundleData,
+            bundlePath.FullName
+        );
+
+        var containers = helper
+            .GetAllBaseFields(0)
+            .Select(GetContainer)
+            .Where(x => x != null)
+            .Select(x =>
+            {
+                var newValue = ValueBuilder.DefaultValueFieldFromArrayTemplate(newArray);
+                newValue.Value.AsString = x;
+                return newValue;
+            });
+
+        newArray.Children.AddRange(containers);
+    }
+
+    private static string? GetContainer(AssetTypeValueField assetField)
+    {
+        if (assetField["m_Container"] is not { IsDummy: false } container)
+            return null;
+
+        string containerName = container[0][0][0].AsString;
+        containerName = containerName.Replace("assets/_gluonresources/", "");
+        containerName = containerName.Replace("resources/", "");
+        return containerName;
+    }
 }
 
 file class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
@@ -236,7 +272,7 @@ file class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
         AssetTypeValueField name = obj["name"];
 
         if (name.IsDummy)
-            throw new ArgumentException("Not a manifet asset", nameof(obj));
+            throw new ArgumentException("Not a manifest asset", nameof(obj));
 
         return name.AsString.GetHashCode();
     }
