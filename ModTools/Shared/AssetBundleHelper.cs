@@ -118,26 +118,35 @@ public class AssetBundleHelper : IDisposable
 
     private AssetFileInfo GetFileInfo(string assetName, int fileIndex)
     {
-        AssetFileInfo? assetFileInfo = this.FileInstances[fileIndex].file
-            .GetAssetsOfType(AssetClassID.MonoBehaviour)
-            .FirstOrDefault(fileInfo =>
+        AssetsFileInstance assetsFile = this.FileInstances[fileIndex];
+        AssetsFileReader reader = assetsFile.file.Reader;
+        AssetFileInfo? result = null;
+
+        foreach (
+            AssetFileInfo assetFileInfo in assetsFile.file.GetAssetsOfType(
+                AssetClassID.MonoBehaviour
+            )
+        )
+        {
+            long filePosition = assetFileInfo.GetAbsoluteByteOffset(assetsFile.file);
+            reader.Position = filePosition + 0x1c;
+            string readAssetName = reader.ReadCountStringInt32();
+
+            if (readAssetName == assetName)
             {
-                AssetTypeValueField baseField = this.manager.GetBaseField(
-                    this.FileInstances[fileIndex],
-                    fileInfo
-                );
+                result = assetFileInfo;
+                break;
+            }
+        }
 
-                return baseField["m_Name"].AsString == assetName;
-            });
-
-        if (assetFileInfo == null)
+        if (result == null)
         {
             throw new ArgumentException(
                 $"Could not find any MonoBehaviour assets with m_Name == {assetName}"
             );
         }
 
-        return assetFileInfo;
+        return result;
     }
 
     public void Dispose()
