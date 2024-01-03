@@ -1,9 +1,10 @@
 ﻿using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-namespace SerializableDictionaryPlugin;
+namespace SerializableDictionaryPlugin.Shared;
 
 public static class SerializableDictionaryHelper
 {
@@ -11,11 +12,14 @@ public static class SerializableDictionaryHelper
     {
         using FileStream fs = File.OpenRead(filepath);
 
-        Dictionary<string, JsonElement>? baseDictionary = JsonSerializer.Deserialize<
-            Dictionary<string, JsonElement>
-        >(fs);
+        Dictionary<string, JsonElement>? baseDictionary =
+            JsonSerializer.Deserialize(
+                fs,
+                typeof(Dictionary<string, JsonElement>),
+                SourceGenerationContext.Default
+            ) as Dictionary<string, JsonElement>;
 
-        if (baseDictionary is null || !baseDictionary.Any())
+        if (baseDictionary is not { Count: > 0 })
             throw new ArgumentException("Null or empty dictionary");
 
         AssetTypeValueField dict = baseField["dict"];
@@ -51,7 +55,12 @@ public static class SerializableDictionaryHelper
             .ToDictionary(x => x.First, x => x.Second);
 
         using FileStream fs = File.Open(filepath, FileMode.Create, FileAccess.ReadWrite);
-        JsonSerializer.Serialize(fs, newDict, new JsonSerializerOptions() { WriteIndented = true });
+        JsonSerializer.Serialize(
+            fs,
+            newDict,
+            typeof(Dictionary<object, object>),
+            SourceGenerationContext.Default
+        );
     }
 
     private static void UpdateFromStringDictionary(
@@ -135,32 +144,30 @@ public static class SerializableDictionaryHelper
         IEnumerable<JsonElement> newValues
     )
     {
-        array.Children = newValues
-            .Select(jsonObject =>
-            {
-                AssetTypeValueField newChild = ValueBuilder.DefaultValueFieldFromArrayTemplate(
-                    array
+        List<AssetTypeValueField> newChildren = new(array.Children.Count);
+        newChildren.AddRange(newValues.Select(e => BuildChild(e, array)));
+
+        array.Children = newChildren;
+    }
+
+    private static AssetTypeValueField BuildChild(JsonElement jsonObject, AssetTypeValueField array)
+    {
+        AssetTypeValueField newChild = ValueBuilder.DefaultValueFieldFromArrayTemplate(array);
+        if (jsonObject.ValueKind == JsonValueKind.Undefined)
+            return newChild;
+
+        foreach (AssetTypeValueField grandChild in newChild)
+        {
+            if (!jsonObject.TryGetProperty(grandChild.FieldName, out JsonElement property))
+                throw new InvalidOperationException(
+                    $"Missing JSON property: {grandChild.FieldName}"
                 );
-                if (jsonObject.ValueKind == JsonValueKind.Undefined)
-                    return newChild;
 
-                foreach (AssetTypeValueField grandChild in newChild)
-                {
-                    if (!jsonObject.TryGetProperty(grandChild.FieldName, out JsonElement property))
-                        throw new InvalidOperationException(
-                            $"Missing JSON property: {grandChild.FieldName}"
-                        );
+            object jsonProperty = DeserializeToPrimitiveValue(property, grandChild.Value.ValueType);
+            grandChild.Value.AsObject = jsonProperty;
+        }
 
-                    object jsonProperty = DeserializeToPrimitiveValue(
-                        property,
-                        grandChild.Value.ValueType
-                    );
-                    grandChild.Value.AsObject = jsonProperty;
-                }
-
-                return newChild;
-            })
-            .ToList();
+        return newChild;
     }
 
     private static object GetPrimitiveFieldValue(AssetTypeValueField field)
