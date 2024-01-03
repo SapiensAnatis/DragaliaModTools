@@ -3,7 +3,7 @@ using AssetsTools.NET.Extra;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace SerializableDictionaryPlugin;
+namespace SerializableDictionaryPlugin.Shared;
 
 public static class SerializableDictionaryHelper
 {
@@ -11,11 +11,14 @@ public static class SerializableDictionaryHelper
     {
         using FileStream fs = File.OpenRead(filepath);
 
-        Dictionary<string, JsonElement>? baseDictionary = JsonSerializer.Deserialize<
-            Dictionary<string, JsonElement>
-        >(fs);
+        Dictionary<string, JsonElement>? baseDictionary =
+            JsonSerializer.Deserialize(
+                fs,
+                typeof(Dictionary<string, JsonElement>),
+                SourceGenerationContext.Default
+            ) as Dictionary<string, JsonElement>;
 
-        if (baseDictionary is null || !baseDictionary.Any())
+        if (baseDictionary is not { Count: > 0 })
             throw new ArgumentException("Null or empty dictionary");
 
         AssetTypeValueField dict = baseField["dict"];
@@ -51,7 +54,12 @@ public static class SerializableDictionaryHelper
             .ToDictionary(x => x.First, x => x.Second);
 
         using FileStream fs = File.Open(filepath, FileMode.Create, FileAccess.ReadWrite);
-        JsonSerializer.Serialize(fs, newDict, new JsonSerializerOptions() { WriteIndented = true });
+        JsonSerializer.Serialize(
+            fs,
+            newDict,
+            typeof(Dictionary<object, object>),
+            SourceGenerationContext.Default
+        );
     }
 
     private static void UpdateFromStringDictionary(
