@@ -19,26 +19,19 @@ public class EditCommand : Command
         Argument<FileInfo> outputArgument =
             new("output", description: "The path to save the result to.");
 
-        Option<bool> debugOption = new("debug", description: "Leave intermediate-stage files.");
-        {
-            IsHidden = true;
-        }
-
         EncryptedAssetBundleHelperBinder manifestBinder = new(manifestArgument);
 
         AddArgument(manifestArgument);
         AddArgument(assetBundleArgument);
         AddArgument(outputArgument);
-        AddOption(debugOption);
 
-        this.SetHandler(DoEdit, manifestBinder, assetBundleArgument, outputArgument, debugOption);
+        this.SetHandler(DoEdit, manifestBinder, assetBundleArgument, outputArgument);
     }
 
     private static void DoEdit(
         AssetBundleHelper manifestHelper,
         FileInfo assetBundlePath,
-        FileInfo outputPath,
-        bool debug
+        FileInfo outputPath
     )
     {
         AssetTypeValueField manifestField = manifestHelper.GetBaseField("manifest");

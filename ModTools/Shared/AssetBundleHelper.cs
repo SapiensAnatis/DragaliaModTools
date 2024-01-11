@@ -129,6 +129,9 @@ public class AssetBundleHelper : IDisposable
         )
         {
             long filePosition = assetFileInfo.GetAbsoluteByteOffset(assetsFile.file);
+
+            // This trick (from UABEA) only works for MonoBehaviours with m_Name set, i.e. only scriptable object
+            // MonoBehaviours.
             reader.Position = filePosition + 0x1c;
             string readAssetName = reader.ReadCountStringInt32();
 
