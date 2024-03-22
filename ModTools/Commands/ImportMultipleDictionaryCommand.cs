@@ -1,8 +1,6 @@
 using System.CommandLine;
 using AssetsTools.NET;
-using Microsoft.Extensions.Logging;
 using ModTools.Shared;
-using SerializableDictionaryPlugin;
 using SerializableDictionaryPlugin.Shared;
 
 namespace ModTools.Commands;
