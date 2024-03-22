@@ -53,9 +53,15 @@ jobs:
         run: dotnet restore -r ${{ matrix.os.rid }}
 
       - name: Publish
-        run: |
-          dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.os.rid }} -r ${{ matrix.os.rid }} --no-self-contained
-          zip -r ${{ matrix.os.rid }}.zip ./${{ matrix.os.rid }}/*
+        run: dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.os.rid }} -r ${{ matrix.os.rid }} --no-self-contained
+      
+      - name: Compress
+        if: ${{ matrix.os.runs-on != 'windows-latest' }}
+        run: zip -r ${{ matrix.os.rid }}.zip ./${{ matrix.os.rid }}/*
+      
+      - name: Compress        
+        if: ${{ matrix.os.runs-on == 'windows-latest' }}
+        run: Compress-Archive -DestinationPath ${{ matrix.os.rid }}.zip -Path ./${{ matrix.os.rid }}/*
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
