@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: "0"
+
+      - name: Tag
+        id: tag
+        uses: anothrNick/github-tag-action@1.67.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+  
+  build:
+    needs: tag
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid:
+          [
+            "win-x64",
+            "linux-x64",
+            "linux-arm64",
+            "osx-x64",
+            "osx-arm64",
+          ]
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - name: Setup .NET SDK 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0
+
+      - name: Install dependencies
+        run: dotnet restore -r ${{ matrix.rid }}
+
+      - name: Publish
+        run: |
+          dotnet publish ModTools.csproj -c Release --no-restore -o ./${{ matrix.rid }} -r ${{ matrix.rid }} --no-self-contained
+          zip -r ${{ matrix.rid }}.zip ./${{ matrix.rid }}/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}.zip
+          path: ./${{ matrix.rid }}.zip
+  
+  make-release:
+    needs:
+      - tag
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts/
+
+      - name: Make release
+        uses: softprops/action-gh-release@v2.0.4
+        with:
+          files: ./artifacts/**/*
+          tag_name: ${{ needs.tag.outputs.new_tag }}
+
