@@ -7,7 +7,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 
 namespace ModTools.Shared;
 
-public static class RijndaelHelper
+internal static class RijndaelHelper
 {
     private static readonly byte[] Key = Convert.FromBase64String(
         "2JDKdLwjKMDLgxXGsI4AxBQ9t7d7of9Jp5gQkdBryoM="

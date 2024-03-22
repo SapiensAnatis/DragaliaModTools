@@ -67,7 +67,7 @@ public class ImportDictionaryCommand : Command
         AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
 
         Console.WriteLine("Importing file {0} over asset {1}", dictionaryPath, assetName);
-        SerializableDictionaryHelper.UpdateFromFile(dictionaryPath.FullName, field);
+        SerializableDictionaryHelper.UpdateFromFile(field, dictionaryPath.FullName);
 
         bundleHelper.UpdateBaseField(assetName, field);
 

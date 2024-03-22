@@ -3,23 +3,24 @@ using AssetsTools.NET.Extra;
 
 namespace ModTools.Shared;
 
-public class AssetBundleHelper : IDisposable
+internal sealed class AssetBundleHelper : IDisposable
 {
     private readonly AssetsManager manager;
     private readonly BundleFileInstance bundleInstance;
+    private readonly List<AssetsFileInstance> fileInstances = [];
 
-    public List<AssetsFileInstance> FileInstances { get; } = new();
+    public IList<AssetsFileInstance> FileInstances => fileInstances;
 
     public string Path => this.bundleInstance.path;
 
-    public AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
+    private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
         this.manager = manager;
         this.bundleInstance = bundleInstance;
 
         foreach (
-            (string name, int idx) in bundleInstance.file
-                .GetAllFileNames()
+            (string name, int idx) in bundleInstance
+                .file.GetAllFileNames()
                 .Select((x, idx) => (x, idx))
         )
         {
@@ -37,7 +38,7 @@ public class AssetBundleHelper : IDisposable
                 Console.Error.WriteLine(
                     $"[ERROR] Failed to load file instance {name} at index {idx}"
                 );
-                continue;
+                throw;
             }
 
             if (instance == null)
@@ -47,7 +48,7 @@ public class AssetBundleHelper : IDisposable
                 continue;
             }
 
-            this.FileInstances.Add(instance);
+            this.fileInstances.Add(instance);
         }
     }
 
@@ -61,10 +62,12 @@ public class AssetBundleHelper : IDisposable
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
-    public List<AssetTypeValueField> GetAllBaseFields(int fileIndex = 0)
+    public IList<AssetTypeValueField> GetAllBaseFields(int fileIndex = 0)
     {
-        return this.FileInstances[fileIndex].file.AssetInfos
-            .Select(x => this.manager.GetBaseField(this.FileInstances[fileIndex], x))
+        return this.FileInstances[fileIndex]
+            .file.AssetInfos.Select(x =>
+                this.manager.GetBaseField(this.FileInstances[fileIndex], x)
+            )
             .ToList();
     }
 
@@ -90,17 +93,19 @@ public class AssetBundleHelper : IDisposable
     {
         for (int i = 0; i < FileInstances.Count; i++)
         {
-            this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[i].SetNewData(
-                this.FileInstances[i].file
-            );
+            this.bundleInstance.file.BlockAndDirInfo.DirectoryInfos[i]
+                .SetNewData(this.FileInstances[i].file);
         }
 
-        using MemoryStream decompStream = new();
+        int streamLength = checked((int)this.bundleInstance.BundleStream.Length);
+        
+        using MemoryStream decompStream = new(streamLength);
         using AssetsFileWriter decompWriter = new(decompStream);
         this.bundleInstance.file.Write(decompWriter);
 
         AssetBundleFile newUncompressedBundle = new();
-        newUncompressedBundle.Read(new AssetsFileReader(decompStream));
+        using AssetsFileReader reader = new(decompStream);
+        newUncompressedBundle.Read(reader);
         using AssetsFileWriter writer = new(stream);
         newUncompressedBundle.Pack(writer, AssetBundleCompressionType.LZ4);
     }
@@ -154,7 +159,6 @@ public class AssetBundleHelper : IDisposable
 
     public void Dispose()
     {
-        GC.SuppressFinalize(this);
         this.bundleInstance.BundleStream.Dispose();
     }
 }

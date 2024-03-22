@@ -3,7 +3,7 @@ using System.CommandLine.Binding;
 
 namespace ModTools.Shared;
 
-public class OutputPathBinder(
+internal sealed class OutputPathBinder(
     Argument<FileInfo> assetBundleArgument,
     Argument<FileInfo?> outputPathArgument,
     Option<bool> inplaceOption

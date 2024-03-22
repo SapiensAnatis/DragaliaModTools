@@ -9,6 +9,7 @@
     <RootNamespace>ModTools</RootNamespace>
     <PublishAot>true</PublishAot>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <AnalysisLevel>latest-all</AnalysisLevel>
   </PropertyGroup>
 
   <ItemGroup>

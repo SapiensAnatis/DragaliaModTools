@@ -21,12 +21,12 @@ public class CheckTargetCommand : Command
         IEnumerable<FileInfo> filePaths = Directory
             .GetFiles(checkDirectory.FullName, "*", SearchOption.AllDirectories)
             .Select(x => new FileInfo(x))
-            .Where(x => x.Extension == string.Empty);
+            .Where(x => string.IsNullOrEmpty(x.Extension));
 
         foreach (FileInfo path in filePaths)
         {
             byte[] data = File.ReadAllBytes(path.FullName);
-            AssetBundleHelper helper = AssetBundleHelper.FromData(data, path.FullName);
+            using AssetBundleHelper helper = AssetBundleHelper.FromData(data, path.FullName);
 
             foreach (AssetsFileInstance fileInstance in helper.FileInstances)
             {

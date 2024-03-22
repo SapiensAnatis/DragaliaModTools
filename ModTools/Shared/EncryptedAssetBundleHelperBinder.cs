@@ -3,7 +3,7 @@ using System.CommandLine.Binding;
 
 namespace ModTools.Shared;
 
-public class EncryptedAssetBundleHelperBinder(Argument<FileInfo> assetBundleArgument)
+internal sealed class EncryptedAssetBundleHelperBinder(Argument<FileInfo> assetBundleArgument)
     : BinderBase<AssetBundleHelper>
 {
     protected override AssetBundleHelper GetBoundValue(BindingContext bindingContext)

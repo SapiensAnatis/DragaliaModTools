@@ -6,7 +6,7 @@ on:
       prerelease:
         type: boolean
         description: "Prerelease"
-        
+
 jobs:
   tag:
     runs-on: ubuntu-latest
@@ -54,12 +54,12 @@ jobs:
 
       - name: Publish
         run: dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.os.rid }} -r ${{ matrix.os.rid }} --no-self-contained
-      
+
       - name: Compress
         if: ${{ matrix.os.runs-on != 'windows-latest' }}
         run: zip -r ${{ matrix.os.rid }}.zip ./${{ matrix.os.rid }}/*
-      
-      - name: Compress        
+
+      - name: Compress
         if: ${{ matrix.os.runs-on == 'windows-latest' }}
         run: Compress-Archive -DestinationPath ${{ matrix.os.rid }}.zip -Path ./${{ matrix.os.rid }}/*
 

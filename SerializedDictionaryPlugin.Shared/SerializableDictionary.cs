@@ -23,13 +23,25 @@
  * SOFTWARE.
  */
 
+// Not my code :)
 #nullable disable
+#pragma warning disable CA1507
+#pragma warning disable CA1510
+#pragma warning disable CA1051
+#pragma warning disable CA1708
+#pragma warning disable CA2235
+#pragma warning disable CA1034
+#pragma warning disable CA1033
+#pragma warning disable CA1062
+#pragma warning disable CA1812
+#pragma warning disable CA1305
+
 
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.Intrinsics.Arm;
 
-namespace SerializableDictionaryPlugin;
+namespace SerializableDictionaryPlugin.Shared;
 
 [Serializable]
 public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
@@ -65,7 +77,6 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 
     KeyCollection keys;
     ValueCollection values;
-    object _syncRoot;
 
     public SerializableDictionary()
     {

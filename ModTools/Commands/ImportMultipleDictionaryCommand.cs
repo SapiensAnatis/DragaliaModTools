@@ -72,7 +72,7 @@ public class ImportMultipleDictionaryCommand : Command
 
             AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
 
-            SerializableDictionaryHelper.UpdateFromFile(file.FullName, field);
+            SerializableDictionaryHelper.UpdateFromFile(field, file.FullName);
 
             bundleHelper.UpdateBaseField(assetName, field);
         }

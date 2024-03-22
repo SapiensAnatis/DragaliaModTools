@@ -1,8 +1,8 @@
-﻿using AssetsTools.NET.Extra;
+﻿using System.CommandLine;
+using System.Runtime.CompilerServices;
+using AssetsTools.NET.Extra;
 using ModTools.Shared;
 using Org.BouncyCastle.Asn1.X509;
-using System.CommandLine;
-using System.Runtime.CompilerServices;
 
 namespace ModTools.Commands;
 
