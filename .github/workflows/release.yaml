@@ -5,13 +5,15 @@ on:
     inputs:
       prerelease:
         type: boolean
-        description: "Whether the generated release should be marked as a prerelease"
+        description: "Prerelease"
+        
 jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: "0"
 
       - name: Tag
@@ -26,16 +28,15 @@ jobs:
   
   build:
     needs: tag
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os.runs-on }}
     strategy:
       matrix:
-        rid:
+        os:
           [
-            "win-x64",
-            "linux-x64",
-            "linux-arm64",
-            "osx-x64",
-            "osx-arm64",
+            { rid: "win-x64", runs-on: 'windows-latest' },
+            { rid: "linux-x64", runs-on: 'ubuntu-latest' },
+            { rid: "osx-x64", runs-on: 'macos-latest' },
+            # ARM runners aren't generally available yet, and NAOT can't be cross-compiled
           ]
     
     steps:
@@ -49,18 +50,18 @@ jobs:
           dotnet-version: 8.0
 
       - name: Install dependencies
-        run: dotnet restore -r ${{ matrix.rid }}
+        run: dotnet restore -r ${{ matrix.os.rid }}
 
       - name: Publish
         run: |
-          dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.rid }} -r ${{ matrix.rid }} --no-self-contained
-          zip -r ${{ matrix.rid }}.zip ./${{ matrix.rid }}/*
+          dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.os.rid }} -r ${{ matrix.os.rid }} --no-self-contained
+          zip -r ${{ matrix.os.rid }}.zip ./${{ matrix.os.rid }}/*
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rid }}.zip
-          path: ./${{ matrix.rid }}.zip
+          name: ${{ matrix.os.rid }}.zip
+          path: ./${{ matrix.os.rid }}.zip
   
   make-release:
     needs:
