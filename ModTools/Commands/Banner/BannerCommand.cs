@@ -77,6 +77,9 @@ internal sealed class BannerCommand : Command
             // Highest priority shows first - calculate priority so that banners show in order of index in JSON array
             assetBanner.Priority = numBanners - index;
 
+            // Set auto-play story ID
+            assetBanner.EncounterStoryId = configBanner.EncounterStoryId ?? 0;
+
             if (!summonPointDict.TryGetValue(configBanner.Id, out SummonPointData? assetPointData))
             {
                 summonPointDict[configBanner.Id] = new()

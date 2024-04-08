@@ -5,8 +5,10 @@ namespace ModTools.Commands.Banner;
 internal sealed class Banner
 {
     public int Id { get; init; }
-    
+
     public int Priority { get; init; }
+
+    public int? EncounterStoryId { get; set; }
 
     public DateTimeOffset Start { get; init; }
 
