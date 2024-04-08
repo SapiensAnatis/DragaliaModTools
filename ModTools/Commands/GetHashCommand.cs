@@ -1,6 +1,6 @@
-using ModTools.Shared;
 using System.CommandLine;
 using System.Security.Cryptography;
+using ModTools.Shared;
 
 namespace ModTools.Commands;
 

@@ -1,9 +1,9 @@
-﻿using AssetsTools.NET;
-using ModTools.Shared;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using AssetsTools.NET;
 using AssetsTools.NET.Extra;
+using ModTools.Shared;
 
 namespace ModTools.Commands.Manifest;
 
@@ -241,13 +241,17 @@ public class MergeCommand : Command
             return null;
 
         string containerName = container[0][0][0].AsString;
-        containerName = containerName.Replace("assets/_gluonresources/", "");
-        containerName = containerName.Replace("resources/", "");
+        containerName = containerName.Replace(
+            "assets/_gluonresources/",
+            "",
+            StringComparison.Ordinal
+        );
+        containerName = containerName.Replace("resources/", "", StringComparison.Ordinal);
         return containerName;
     }
 }
 
-file class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
+file sealed class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
 {
     public static ManifestAssetComparer Instance { get; } = new();
 
@@ -267,13 +271,13 @@ file class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
         return xName.AsString == yName.AsString;
     }
 
-    public int GetHashCode([DisallowNull] AssetTypeValueField obj)
+    public int GetHashCode(AssetTypeValueField obj)
     {
         AssetTypeValueField name = obj["name"];
 
         if (name.IsDummy)
             throw new ArgumentException("Not a manifest asset", nameof(obj));
 
-        return name.AsString.GetHashCode();
+        return name.AsString.GetHashCode(StringComparison.Ordinal);
     }
 }

@@ -1,10 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿namespace SerializableDictionaryPlugin.Shared;
 
-namespace SerializableDictionaryPlugin;
-
-internal class DeterministicStringEqualityComparer : EqualityComparer<string>
+internal sealed class DeterministicStringEqualityComparer : EqualityComparer<string>
 {
-    public static DeterministicStringEqualityComparer Instance { get; } = new();
+    public static EqualityComparer<string> Instance { get; } =
+        new DeterministicStringEqualityComparer();
 
     public override bool Equals(string? x, string? y)
     {

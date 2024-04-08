@@ -1,7 +1,8 @@
 ﻿namespace ModTools.Shared;
 
-public enum TargetPlatform : uint
+internal enum TargetPlatform : uint
 {
+    None = 0,
     Ios = 9,
     Android = 13
 }

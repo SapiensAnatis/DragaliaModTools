@@ -1,26 +1,57 @@
-﻿using AssetsTools.NET;
-using AssetsTools.NET.Extra;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
+using AssetsTools.NET;
+using AssetsTools.NET.Extra;
 
 namespace SerializableDictionaryPlugin.Shared;
 
-public static class SerializableDictionaryHelper
+public static partial class SerializableDictionaryHelper
 {
-    public static void UpdateFromFile(string filepath, AssetTypeValueField baseField)
+    public static void UpdateFromFile(AssetTypeValueField baseField, string filepath)
     {
+        ArgumentNullException.ThrowIfNull(baseField);
+        ArgumentNullException.ThrowIfNull(filepath);
+
         using FileStream fs = File.OpenRead(filepath);
 
-        Dictionary<string, JsonElement>? baseDictionary =
+        if (
             JsonSerializer.Deserialize(
                 fs,
                 typeof(Dictionary<string, JsonElement>),
-                SourceGenerationContext.Default
-            ) as Dictionary<string, JsonElement>;
+                SharedSerializerContext.Default
+            )
+            is not Dictionary<string, JsonElement> source
+        )
+        {
+            throw new ArgumentException("Failed to deserialize dictionary");
+        }
 
-        if (baseDictionary is not { Count: > 0 })
-            throw new ArgumentException("Null or empty dictionary");
+        UpdateFromDictionary(baseField, source);
+    }
+
+    // Will be used when UABEANext allows bringing plugin code into this repo
+    public static void WriteToFile(string filepath, AssetTypeValueField baseField)
+    {
+        Dictionary<string, JsonElement> newDict = LoadAsDictionary(baseField);
+
+        using FileStream fs = File.Open(filepath, FileMode.Create, FileAccess.ReadWrite);
+
+        JsonSerializer.Serialize(
+            fs,
+            newDict,
+            typeof(Dictionary<object, JsonElement>),
+            SharedSerializerContext.Default
+        );
+    }
+
+    public static void UpdateFromDictionary(
+        AssetTypeValueField baseField,
+        Dictionary<string, JsonElement> source
+    )
+    {
+        ArgumentNullException.ThrowIfNull(baseField);
+        ArgumentNullException.ThrowIfNull(source);
 
         AssetTypeValueField dict = baseField["dict"];
         AssetValueType keyType = dict["entriesKey.Array"][0].TemplateField.ValueType;
@@ -28,39 +59,39 @@ public static class SerializableDictionaryHelper
         switch (keyType)
         {
             case AssetValueType.Int32:
-                UpdateFromIntDictionary(dict, baseDictionary);
+                UpdateFromIntDictionary(dict, source);
                 break;
             case AssetValueType.String:
-                UpdateFromStringDictionary(dict, baseDictionary);
+                UpdateFromStringDictionary(dict, source);
                 break;
             default:
                 throw new NotSupportedException($"Keys of type {keyType} are not supported.");
         }
     }
 
-    public static void WriteToFile(string filepath, AssetTypeValueField baseField)
+    public static Dictionary<string, JsonElement> LoadAsDictionary(AssetTypeValueField baseField)
     {
+        ArgumentNullException.ThrowIfNull(baseField);
+
         AssetTypeValueField dict = baseField["dict"];
         int count = dict["count"].AsInt;
 
-        IEnumerable<object> keys = dict["entriesKey.Array"].Children
-            .Select(GetPrimitiveFieldValue)
+        IEnumerable<string> keys = dict["entriesKey.Array"].Children
+            .Select(x => x.AsString)
             .Take(count);
-
-        IEnumerable<object> values = dict["entriesValue.Array"].Children.Select(
-            x => x.Children.ToDictionary(c => c.FieldName, GetPrimitiveFieldValue)
+        IEnumerable<JsonElement> values = dict["entriesValue.Array"].Children.Select(
+            x =>
+                JsonSerializer.SerializeToElement(
+                    x.Children.ToDictionary(c => c.FieldName, GetPrimitiveFieldValue),
+                    typeof(Dictionary<string, object>),
+                    SharedSerializerContext.Default
+                )
         );
 
-        Dictionary<object, object> newDict = keys.Zip(values)
+        Dictionary<string, JsonElement> newDict = keys.Zip(values)
             .ToDictionary(x => x.First, x => x.Second);
 
-        using FileStream fs = File.Open(filepath, FileMode.Create, FileAccess.ReadWrite);
-        JsonSerializer.Serialize(
-            fs,
-            newDict,
-            typeof(Dictionary<object, object>),
-            SourceGenerationContext.Default
-        );
+        return newDict;
     }
 
     private static void UpdateFromStringDictionary(
@@ -89,8 +120,10 @@ public static class SerializableDictionaryHelper
                 {
                     if (!int.TryParse(x.Key, out int intKey))
                     {
-                        Debugger.Break();
-                        throw new ArgumentException(nameof(x));
+                        throw new ArgumentException(
+                            $"Failed to parse key {x} to integer",
+                            nameof(source)
+                        );
                     }
 
                     return new KeyValuePair<int, JsonElement>(intKey, x.Value);
@@ -117,6 +150,17 @@ public static class SerializableDictionaryHelper
         dict["freeList"].AsInt = serializedDict.freeList;
     }
 
+    private static void UpdateFromObjects(
+        AssetTypeValueField array,
+        IEnumerable<JsonElement> newValues
+    )
+    {
+        List<AssetTypeValueField> newChildren = new(array.Children.Count);
+        newChildren.AddRange(newValues.Select(e => BuildChild(e, array)));
+
+        array.Children = newChildren;
+    }
+
     private static void UpdateFromArray<TValue>(
         AssetTypeValueField array,
         IEnumerable<TValue> newValues
@@ -139,55 +183,21 @@ public static class SerializableDictionaryHelper
             .ToList();
     }
 
-    private static void UpdateFromObjects(
-        AssetTypeValueField array,
-        IEnumerable<JsonElement> newValues
-    )
-    {
-        List<AssetTypeValueField> newChildren = new(array.Children.Count);
-        newChildren.AddRange(newValues.Select(e => BuildChild(e, array)));
-
-        array.Children = newChildren;
-    }
-
     private static AssetTypeValueField BuildChild(JsonElement jsonObject, AssetTypeValueField array)
     {
         AssetTypeValueField newChild = ValueBuilder.DefaultValueFieldFromArrayTemplate(array);
         if (jsonObject.ValueKind == JsonValueKind.Undefined)
             return newChild;
-
         foreach (AssetTypeValueField grandChild in newChild)
         {
             if (!jsonObject.TryGetProperty(grandChild.FieldName, out JsonElement property))
                 throw new InvalidOperationException(
                     $"Missing JSON property: {grandChild.FieldName}"
                 );
-
             object jsonProperty = DeserializeToPrimitiveValue(property, grandChild.Value.ValueType);
             grandChild.Value.AsObject = jsonProperty;
         }
-
         return newChild;
-    }
-
-    private static object GetPrimitiveFieldValue(AssetTypeValueField field)
-    {
-        return field.Value.ValueType switch
-        {
-            AssetValueType.Bool => field.AsBool,
-            AssetValueType.Int64 => field.AsLong,
-            AssetValueType.Int32 => field.AsInt,
-            AssetValueType.Int16 => field.AsShort,
-            AssetValueType.Int8 => field.AsSByte,
-            AssetValueType.UInt64 => field.AsULong,
-            AssetValueType.UInt32 => field.AsUInt,
-            AssetValueType.UInt16 => field.AsUShort,
-            AssetValueType.UInt8 => field.AsByte,
-            AssetValueType.String => field.AsString,
-            AssetValueType.Float => field.AsFloat,
-            AssetValueType.Double => field.AsDouble,
-            _ => throw new NotSupportedException($"Unrecognized type {field.Value.ValueType}"),
-        };
     }
 
     private static object DeserializeToPrimitiveValue(JsonElement element, AssetValueType fieldType)
@@ -211,5 +221,25 @@ public static class SerializableDictionaryHelper
                 _ => throw new NotSupportedException($"Unrecognized type {fieldType}")
             };
         }
+    }
+
+    private static object GetPrimitiveFieldValue(AssetTypeValueField field)
+    {
+        return field.Value.ValueType switch
+        {
+            AssetValueType.Bool => field.AsBool,
+            AssetValueType.Int64 => field.AsLong,
+            AssetValueType.Int32 => field.AsInt,
+            AssetValueType.Int16 => field.AsShort,
+            AssetValueType.Int8 => field.AsSByte,
+            AssetValueType.UInt64 => field.AsULong,
+            AssetValueType.UInt32 => field.AsUInt,
+            AssetValueType.UInt16 => field.AsUShort,
+            AssetValueType.UInt8 => field.AsByte,
+            AssetValueType.String => field.AsString,
+            AssetValueType.Float => field.AsFloat,
+            AssetValueType.Double => field.AsDouble,
+            _ => throw new NotSupportedException($"Unrecognized type {field.Value.ValueType}"),
+        };
     }
 }
