@@ -80,6 +80,9 @@ internal sealed class BannerCommand : Command
             // Set auto-play story ID
             assetBanner.EncounterStoryId = configBanner.EncounterStoryId ?? 0;
 
+            assetBanner.ExchangeSummonPoint = 300;
+            assetBanner.SummonPointId = configBanner.Id;
+
             if (!summonPointDict.TryGetValue(configBanner.Id, out SummonPointData? assetPointData))
             {
                 summonPointDict[configBanner.Id] = new()
@@ -92,6 +95,7 @@ internal sealed class BannerCommand : Command
             }
             else
             {
+                assetPointData.SummonId = configBanner.Id;
                 assetPointData.CommenceDate = DateTimeHelper.FormatDate(configBanner.Start);
                 assetPointData.CompleteDate = DateTimeHelper.FormatDate(configBanner.End);
             }
