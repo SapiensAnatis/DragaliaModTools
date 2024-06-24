@@ -19,8 +19,8 @@ internal sealed class ImportDictionaryCommand
         [Argument] string assetBundlePath,
         string assetName,
         string dictionaryPath,
-        string outputPath,
-        bool inplace
+        string? outputPath = null,
+        bool inplace = false
     )
     {
         using AssetBundleHelper bundleHelper = AssetBundleHelper.FromPath(assetBundlePath);
@@ -32,7 +32,17 @@ internal sealed class ImportDictionaryCommand
 
         bundleHelper.UpdateBaseField(assetName, field);
 
-        FileInfo outputFileInfo = new FileInfo(inplace ? assetBundlePath : outputPath);
+        FileInfo outputFileInfo;
+
+        if (inplace)
+        {
+            outputFileInfo = new FileInfo(assetBundlePath);
+        }
+        else
+        {
+            ArgumentNullException.ThrowIfNull(outputPath);
+            outputFileInfo = new FileInfo(outputPath);
+        }
 
         ConsoleApp.Log($"Writing output to {outputFileInfo.FullName}");
 

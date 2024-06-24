@@ -5,6 +5,8 @@ using ModTools.Commands.Manifest;
 
 var app = ConsoleApp.Create();
 
+ConsoleApp.JsonSerializerOptions = ModToolsSerializerContext.Default.Options;
+
 app.UseFilter<ExceptionHandlerFilter>();
 
 app.Add<CheckTargetCommand>();
