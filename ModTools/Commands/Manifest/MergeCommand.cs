@@ -26,8 +26,8 @@ internal sealed class MergeCommand
         bool conversion
     )
     {
-        using AssetBundleHelper targetHelper = AssetBundleHelper.FromPath(targetPath);
-        using AssetBundleHelper sourceHelper = AssetBundleHelper.FromPath(sourcePath);
+        using AssetBundleHelper targetHelper = AssetBundleHelper.FromPathEncrypted(targetPath);
+        using AssetBundleHelper sourceHelper = AssetBundleHelper.FromPathEncrypted(sourcePath);
 
         DirectoryInfo outputBundleDirInfo = new(outputBundleDir);
 
@@ -87,7 +87,10 @@ internal sealed class MergeCommand
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
-        string outputPath = Path.Join(outputManifestDir, sourcePath);
+        string outputPath = Path.Join(
+            Path.GetDirectoryName(outputBundleDir),
+            Path.GetFileName(sourcePath)
+        );
 
         MemoryStream ms = new();
         targetHelper.Write(ms);
