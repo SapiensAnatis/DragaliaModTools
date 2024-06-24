@@ -14,7 +14,7 @@ internal sealed class MergeCommand
     /// <param name="sourcePath">--source|-s The path to the manifest that is the source of the merge.</param>
     /// <param name="outputManifestDir">--output-manifests|-m The path to a directory to output the merged manifest to.</param>
     /// <param name="outputBundleDir">--output-bundles|-b The path to a directory to output the new bundles to.</param>
-    /// <param name="assetDirectory">--assets-path|-a The path to a directory to source the added asset bundles from.</param>
+    /// <param name="assetDirectories">--assets-path|-a Comma-separated list of directories to source the added asset bundles from.</param>
     /// <param name="conversion">--convert|-c Whether to convert assets to iOS during the merge process.</param>
     [Command("merge")]
     public void Command(
@@ -22,7 +22,7 @@ internal sealed class MergeCommand
         string sourcePath,
         string outputManifestDir,
         string outputBundleDir,
-        string assetDirectory,
+        string[] assetDirectories,
         bool conversion
     )
     {
@@ -51,7 +51,7 @@ internal sealed class MergeCommand
             string hash = asset["hash"].AsString;
             string assetPath = GetAssetPath(hash);
             // TODO multiple paths support again
-            FileInfo bundleToAddPath = GetSourceFile(assetPath, [assetDirectory]);
+            FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
 
             if (asset["assets"].IsDummy)
             {
