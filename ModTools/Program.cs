@@ -10,6 +10,8 @@ internal sealed class Program
     {
         var app = ConsoleApp.Create();
 
+        app.UseFilter<ExceptionHandlerFilter>();
+
         app.Add<CheckTargetCommand>();
         app.Add<ConvertBundleCommand>();
         app.Add<GetHashCommand>();
