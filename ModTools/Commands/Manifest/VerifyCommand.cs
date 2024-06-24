@@ -1,24 +1,17 @@
-﻿using System.CommandLine;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Security.Cryptography;
 
 namespace ModTools.Commands.Manifest;
 
-public class VerifyCommand : Command
+internal sealed class VerifyCommand
 {
-    public VerifyCommand()
-        : base("verify", "Verify the integrity of an encrypted manifest.")
+    /// <summary>
+    /// Verify the integrity of an encrypted manifest.
+    /// </summary>
+    /// <param name="manifestPath">Path to the manifest to verify.</param>
+    [Command("verify")]
+    public void Command([Argument] string manifestPath)
     {
-        Argument<FileInfo> manifestArgument = new("manifest", "Path to the manifest to verify.");
-
-        this.AddArgument(manifestArgument);
-
-        this.SetHandler(DoVerification, manifestArgument);
-    }
-
-    private static void DoVerification(FileInfo manifestPath)
-    {
-        ReadOnlySpan<byte> fileBytes = File.ReadAllBytes(manifestPath.FullName);
+        ReadOnlySpan<byte> fileBytes = File.ReadAllBytes(manifestPath);
 
         ReadOnlySpan<byte> finalBytes = fileBytes[^32..];
         ReadOnlySpan<byte> hashBytes = SHA256.HashData(fileBytes[..^32]);
@@ -26,6 +19,6 @@ public class VerifyCommand : Command
         string finalBytesString = Convert.ToBase64String(finalBytes);
         string hashString = Convert.ToBase64String(hashBytes);
 
-        Console.WriteLine($"Final 32 bytes: {finalBytesString}, hash: {hashString}");
+        ConsoleApp.Log($"Final 32 bytes: {finalBytesString}, hash: {hashString}");
     }
 }

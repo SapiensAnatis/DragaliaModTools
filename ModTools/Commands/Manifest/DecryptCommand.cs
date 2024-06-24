@@ -1,24 +1,19 @@
-﻿using System.CommandLine;
-using ModTools.Shared;
+﻿using ModTools.Shared;
 
 namespace ModTools.Commands.Manifest;
 
-public class DecryptCommand : Command
+internal sealed class DecryptCommand
 {
-    public DecryptCommand()
-        : base("decrypt", "Decrypt a manifest")
+    /// <summary>
+    /// Decrypt a manifest.
+    /// </summary>
+    /// <param name="path">The path to the manifest to decrypt.</param>
+    [Command("decrypt")]
+    public void Command(string path)
     {
-        Argument<FileInfo> manifestArgument = new("manifest", "Path to the manifest to decrypt");
+        using AssetBundleHelper manifest = AssetBundleHelper.FromPathEncrypted(path);
 
-        EncryptedAssetBundleHelperBinder binder = new(manifestArgument);
-
-        this.AddArgument(manifestArgument);
-        this.SetHandler(DoDecryption, manifestArgument, binder);
-    }
-
-    private static void DoDecryption(FileInfo path, AssetBundleHelper manifest)
-    {
-        using FileStream fs = File.OpenWrite(path.FullName + ".decrypted");
+        using FileStream fs = File.OpenWrite(path + ".decrypted");
         manifest.Write(fs);
     }
 }

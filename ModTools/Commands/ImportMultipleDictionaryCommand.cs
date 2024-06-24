@@ -1,74 +1,29 @@
-using System.CommandLine;
 using AssetsTools.NET;
 using ModTools.Shared;
 using SerializableDictionaryPlugin.Shared;
 
 namespace ModTools.Commands;
 
-public class ImportMultipleDictionaryCommand : Command
+internal sealed class ImportMultipleDictionaryCommand
 {
-    public ImportMultipleDictionaryCommand()
-        : base(
-            "import-multiple",
-            "Import a directory of serializable dictionary files into an asset bundle."
-        )
+    /// <summary>
+    /// Import a directory of serializable dictionary files into an asset bundle.
+    /// </summary>
+    /// <param name="assetBundlePath">The path to the asset bundle to open.</param>
+    /// <param name="directory">-d The path to the directory containing the dictionary JSON files to import.</param>
+    /// <param name="outputPath">--output|-o The path to write the output asset to.</param>
+    [Command("import-multiple")]
+    public void Command([Argument] string assetBundlePath, string directory, string outputPath)
     {
-        Argument<FileInfo> assetBundleArgument =
-            new(name: "assetbundle", description: "The path to the asset bundle to open.");
+        DirectoryInfo directoryInfo = new DirectoryInfo(directory);
+        FileInfo outputFileInfo = new FileInfo(outputPath);
 
-        Argument<DirectoryInfo> directoryArgument =
-            new(
-                name: "directory",
-                description: "The directory containing files to import. "
-                    + "All .json files will be imported over the asset matching their name, sans extension."
-            );
+        using AssetBundleHelper bundleHelper = AssetBundleHelper.FromPath(assetBundlePath);
 
-        Argument<FileInfo?> outputArgument =
-            new(name: "output", () => null, description: "The desired asset bundle output path.");
-
-        Option<bool> inPlaceOption =
-            new(name: "--inplace", description: "Specify to modify the file in-place.");
-
-        outputArgument.AddValidator(result =>
-        {
-            if (
-                !result.GetValueForOption(inPlaceOption)
-                && result.GetValueForArgument(outputArgument) == null
-            )
-            {
-                result.ErrorMessage =
-                    "No output path specified. Use --inplace to modify the file in place.";
-            }
-        });
-
-        AssetBundleHelperBinder assetBundleBinder = new(assetBundleArgument);
-        OutputPathBinder outputPathBinder = new(assetBundleArgument, outputArgument, inPlaceOption);
-
-        this.AddArgument(assetBundleArgument);
-        this.AddArgument(directoryArgument);
-        this.AddArgument(outputArgument);
-        this.AddOption(inPlaceOption);
-
-        this.SetHandler(
-            DoImport,
-            assetBundleArgument,
-            directoryArgument,
-            outputPathBinder,
-            assetBundleBinder
-        );
-    }
-
-    private static void DoImport(
-        FileInfo assetBundlePath,
-        DirectoryInfo directoryInfo,
-        FileInfo outputPath,
-        AssetBundleHelper bundleHelper
-    )
-    {
         foreach (FileInfo file in directoryInfo.GetFiles("*.json", SearchOption.TopDirectoryOnly))
         {
             string assetName = Path.GetFileNameWithoutExtension(file.Name);
-            Console.WriteLine("Importing file {0} over asset {1}", file.Name, assetName);
+            ConsoleApp.Log($"Importing file {file.Name} over asset {assetName}");
 
             AssetTypeValueField field = bundleHelper.GetBaseField(assetName);
 
@@ -77,8 +32,8 @@ public class ImportMultipleDictionaryCommand : Command
             bundleHelper.UpdateBaseField(assetName, field);
         }
 
-        Console.WriteLine("Writing output to {0}", outputPath);
-        using FileStream fs = outputPath.OpenWrite();
+        ConsoleApp.Log($"Writing output to {outputPath}");
+        using FileStream fs = outputFileInfo.OpenWrite();
         bundleHelper.Write(fs);
     }
 }

@@ -1,4 +1,3 @@
-using System.CommandLine;
 using System.Text.Json;
 using AssetsTools.NET;
 using ModTools.Shared;
@@ -6,37 +5,19 @@ using static SerializableDictionaryPlugin.Shared.SerializableDictionaryHelper;
 
 namespace ModTools.Commands.Banner;
 
-internal sealed class BannerCommand : Command
+internal sealed class BannerCommand
 {
-    private const string CommandName = "banner";
-
-    private const string CommandDescription =
-        "Populate a master asset with information from a banner.json configuration.";
-
-    public BannerCommand()
-        : base(CommandName, CommandDescription)
+    /// <summary>
+    /// Update the master asset with information from a banner.json configuration file.
+    /// </summary>
+    /// <param name="bannerPath">The path to the banner.json configuration.</param>
+    /// <param name="masterPath">--master|-m The path to the master asset bundle to update.</param>
+    /// <param name="outputPath">--output|-o The path to write the updated master asset bundle.</param>
+    [Command("banner")]
+    public void Command([Argument] string bannerPath, string masterPath, string outputPath)
     {
-        Argument<FileInfo> banner = new("banner", "Path to the banner.json file.");
-        Option<FileInfo> masterSource =
-            new("--source", "Path to the master asset to update.") { IsRequired = true };
-        Option<FileInfo> output =
-            new("--output", "Path to write the result to.") { IsRequired = true };
+        using AssetBundleHelper masterSource = AssetBundleHelper.FromPath(masterPath);
 
-        this.AddArgument(banner);
-        this.AddOption(masterSource);
-        this.AddOption(output);
-
-        AssetBundleHelperBinder sourceBinder = new(masterSource);
-
-        this.SetHandler(DoCommand, banner, sourceBinder, output);
-    }
-
-    private static void DoCommand(
-        FileInfo bannerPath,
-        AssetBundleHelper masterSource,
-        FileInfo outputPath
-    )
-    {
         AssetTypeValueField summonData = masterSource.GetBaseField("SummonData");
         Dictionary<int, SummonData> summonDataDict = LoadAsDictionary<int, SummonData>(summonData);
 
@@ -46,7 +27,7 @@ internal sealed class BannerCommand : Command
         );
 
         BannerConfigFile bannerOptions;
-        using (FileStream fs = File.OpenRead(bannerPath.FullName))
+        using (FileStream fs = File.OpenRead(bannerPath))
         {
             bannerOptions =
                 JsonSerializer.Deserialize(fs, ModToolsSerializerContext.Default.BannerConfigFile)
@@ -61,7 +42,7 @@ internal sealed class BannerCommand : Command
             )
         )
         {
-            Console.WriteLine($"Updating entries for banner ID {configBanner.Id}");
+            ConsoleApp.Log($"Updating entries for banner ID {configBanner.Id}");
             if (!summonDataDict.TryGetValue(configBanner.Id, out SummonData? assetBanner))
             {
                 throw new NotSupportedException(
@@ -107,8 +88,8 @@ internal sealed class BannerCommand : Command
         masterSource.UpdateBaseField("SummonData", summonData);
         masterSource.UpdateBaseField("SummonPointData", summonPointData);
 
-        Console.WriteLine($"Saving result to {outputPath.FullName}");
-        using (FileStream fs = outputPath.OpenWrite())
+        ConsoleApp.Log($"Saving result to {outputPath}");
+        using (FileStream fs = File.OpenWrite(outputPath))
         {
             masterSource.Write(fs);
         }

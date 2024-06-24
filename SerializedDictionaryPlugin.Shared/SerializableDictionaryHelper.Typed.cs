@@ -22,8 +22,8 @@ public static partial class SerializableDictionaryHelper
         AssetTypeValueField dict = baseField["dict"];
         int count = dict["count"].AsInt;
 
-        IEnumerable<TKey> keys = dict["entriesKey.Array"].Children
-            .Select(x =>
+        IEnumerable<TKey> keys = dict["entriesKey.Array"]
+            .Children.Select(x =>
             {
                 object key = typeof(TKey) == typeof(string) ? x.AsString : x.AsObject;
 

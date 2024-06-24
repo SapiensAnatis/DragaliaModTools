@@ -1,29 +1,27 @@
-﻿using System.CommandLine;
-using System.CommandLine.Binding;
-using System.Data;
-using System.Runtime.CompilerServices;
-using AssetsTools.NET;
-using ModTools.Commands;
+﻿using ModTools.Commands;
 using ModTools.Commands.Banner;
 using ModTools.Commands.Manifest;
-using SerializableDictionaryPlugin;
 
 namespace ModTools;
 
 internal sealed class Program
 {
-    private static async Task<int> Main(string[] args)
+    private static async Task Main(string[] args)
     {
-        RootCommand rootCommand = new("Dragalia modding utility.");
+        var app = ConsoleApp.Create();
 
-        rootCommand.AddCommand(new ImportDictionaryCommand());
-        rootCommand.AddCommand(new ImportMultipleDictionaryCommand());
-        rootCommand.AddCommand(new GetHashCommand());
-        rootCommand.AddCommand(new ManifestCommand());
-        rootCommand.AddCommand(new ConvertBundleCommand());
-        rootCommand.AddCommand(new CheckTargetCommand());
-        rootCommand.AddCommand(new BannerCommand());
+        app.Add<CheckTargetCommand>();
+        app.Add<ConvertBundleCommand>();
+        app.Add<GetHashCommand>();
+        app.Add<ImportDictionaryCommand>();
+        app.Add<ImportMultipleDictionaryCommand>();
+        app.Add<BannerCommand>();
 
-        return await rootCommand.InvokeAsync(args).ConfigureAwait(false);
+        app.Add<DecryptCommand>("manifest");
+        app.Add<EditCommand>("manifest");
+        app.Add<MergeCommand>("manifest");
+        app.Add<VerifyCommand>("manifest");
+
+        await app.RunAsync(args).ConfigureAwait(false);
     }
 }

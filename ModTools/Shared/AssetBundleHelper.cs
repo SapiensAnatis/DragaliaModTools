@@ -44,12 +44,25 @@ internal sealed class AssetBundleHelper : IDisposable
             if (instance == null)
             {
                 // Probably a .resS file
-                Console.WriteLine($"Skipping file instance {name} at index {idx}");
+                ConsoleApp.Log($"Skipping file instance {name} at index {idx}");
                 continue;
             }
 
             this.fileInstances.Add(instance);
         }
+    }
+
+    public static AssetBundleHelper FromPath(string path)
+    {
+        return FromData(File.ReadAllBytes(path), path);
+    }
+
+    public static AssetBundleHelper FromPathEncrypted(string path)
+    {
+        byte[] encrypted = File.ReadAllBytes(path);
+        byte[] data = RijndaelHelper.Decrypt(encrypted);
+
+        return FromData(data, path);
     }
 
     public static AssetBundleHelper FromData(byte[] data, string path)
@@ -98,7 +111,7 @@ internal sealed class AssetBundleHelper : IDisposable
         }
 
         int streamLength = checked((int)this.bundleInstance.BundleStream.Length);
-        
+
         using MemoryStream decompStream = new(streamLength);
         using AssetsFileWriter decompWriter = new(decompStream);
         this.bundleInstance.file.Write(decompWriter);

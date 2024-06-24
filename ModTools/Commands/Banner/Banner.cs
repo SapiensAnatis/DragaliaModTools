@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace ModTools.Commands.Banner;
 
 internal sealed class Banner
