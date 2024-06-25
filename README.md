@@ -8,21 +8,17 @@ Command-line application for automating several Dragalia modding tasks. Useful f
 ```
 $ ModTools --help
 
-Description:
-  Dragalia modding utility.
-
-Usage:
-  ModTools [command] [options]
-
-Options:
-  --version       Show version information
-  -?, -h, --help  Show help and usage information
+Usage: [command] [-h|--help] [--version]
 
 Commands:
-  import <assetbundle> <asset> <dictionary> <output>  Import a single serialized dictionary over an asset. []
-  import-multiple <assetbundle> <directory> <output>  Import a directory of serializable dictionary files into an asset bundle. []
-  hash <assetbundle>                                  Get the hashed filename of an assetbundle.
-  manifest                                            Commands for editing manifests
-  convert <bundle> <output>                           Converts an Android asset bundle to iOS.
-  check-target <directory>                            Check the runtime target of asset bundles recursively.
+  banner                  Update the master asset with information from a banner.json configuration file.
+  check-target            Check the platform target asset bundles within a directory.
+  convert                 Converts an Android asset bundle to iOS.
+  hash                    Get the hash of an asset bundle.
+  import                  Import a single serialized dictionary over an asset.
+  import-multiple         Import a directory of serializable dictionary files into an asset bundle.
+  manifest decrypt        Decrypt a manifest.
+  manifest edit-master    Update the master asset's hash and size in a manifest.
+  manifest merge          Update the target manifest by adding any files only present in the source manifest.
+  manifest verify         Verify the integrity of an encrypted manifest.
 ```
