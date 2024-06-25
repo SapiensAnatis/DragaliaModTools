@@ -1,80 +1,36 @@
-﻿using System.CommandLine;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using ModTools.Shared;
 
 namespace ModTools.Commands.Manifest;
 
-public class MergeCommand : Command
+internal sealed class MergeCommand
 {
-    public MergeCommand()
-        : base(
-            "merge",
-            "Update the manifest <target> by adding any files only present in <source>."
-        )
-    {
-        Argument<FileInfo> targetArgument = new("target", "Path to the target manifest.");
-        Argument<FileInfo> sourceArgument = new("source", "Path to the source manifest.");
-        Argument<DirectoryInfo> outputArgument =
-            new("output", "Path to a directory to write the manifest result to.");
-        Argument<DirectoryInfo> outputBundleArgument =
-            new("outputBundle", "Path to a directory to write new bundles to.");
-        Option<DirectoryInfo[]> assetDirectoryOption =
-            new("--assetDirectory", "Path to a directory to source bundle files from.");
-
-        Option<bool> convertOption = new("--convert", "Whether to convert the files to iOS.");
-
-        EncryptedAssetBundleHelperBinder targetBinder = new(targetArgument);
-        EncryptedAssetBundleHelperBinder sourceBinder = new(sourceArgument);
-
-        AddArgument(targetArgument);
-        AddArgument(sourceArgument);
-        AddArgument(outputArgument);
-        AddArgument(outputBundleArgument);
-        AddOption(assetDirectoryOption);
-        AddOption(convertOption);
-
-        this.SetHandler(
-            (
-                inputPath,
-                targetHelper,
-                sourceHelper,
-                output,
-                bundleOutput,
-                assetDirectories,
-                conversion
-            ) =>
-                DoMerge(
-                    inputPath,
-                    targetHelper,
-                    sourceHelper,
-                    output,
-                    bundleOutput,
-                    assetDirectories,
-                    conversion
-                ),
-            targetArgument,
-            targetBinder,
-            sourceBinder,
-            outputArgument,
-            outputBundleArgument,
-            assetDirectoryOption,
-            convertOption
-        );
-    }
-
-    private static void DoMerge(
-        FileInfo inputPath,
-        AssetBundleHelper targetHelper,
-        AssetBundleHelper sourceHelper,
-        DirectoryInfo outputManifestDir,
-        DirectoryInfo outputBundleDir,
-        DirectoryInfo[] assetDirectories,
+    /// <summary>
+    /// Update the target manifest by adding any files only present in the source manifest.
+    /// </summary>
+    /// <param name="targetPath">--target|-t The path to the manifest that is the target of the merge.</param>
+    /// <param name="sourcePath">--source|-s The path to the manifest that is the source of the merge.</param>
+    /// <param name="outputManifestDir">--output-manifests|-m The path to a directory to output the merged manifest to.</param>
+    /// <param name="outputBundleDir">--output-bundles|-b The path to a directory to output the new bundles to.</param>
+    /// <param name="assetDirectories">--assets-path|-a Comma-separated list of directories to source the added asset bundles from.</param>
+    /// <param name="conversion">--convert|-c Whether to convert assets to iOS during the merge process.</param>
+    [Command("merge")]
+    public void Command(
+        string targetPath,
+        string sourcePath,
+        string outputManifestDir,
+        string outputBundleDir,
+        string[] assetDirectories,
         bool conversion
     )
     {
+        using AssetBundleHelper targetHelper = AssetBundleHelper.FromPathEncrypted(targetPath);
+        using AssetBundleHelper sourceHelper = AssetBundleHelper.FromPathEncrypted(sourcePath);
+
+        DirectoryInfo outputBundleDirInfo = new(outputBundleDir);
+
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
         AssetTypeValueField sourceBaseField = sourceHelper.GetBaseField("manifest");
 
@@ -84,7 +40,7 @@ public class MergeCommand : Command
             (manifest) => manifest["categories"]["Array"][1]["assets"]["Array"]
         );
 
-        Directory.CreateDirectory(outputBundleDir.FullName);
+        Directory.CreateDirectory(outputBundleDir);
 
         var assets = targetBaseField["categories"]["Array"][1]["assets"]["Array"].Children;
 
@@ -94,7 +50,8 @@ public class MergeCommand : Command
         {
             string hash = asset["hash"].AsString;
             string assetPath = GetAssetPath(hash);
-            FileInfo sourcePath = GetSourceFile(assetPath, assetDirectories);
+            // TODO multiple paths support again
+            FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
 
             if (asset["assets"].IsDummy)
             {
@@ -103,18 +60,18 @@ public class MergeCommand : Command
                 );
                 asset.Children.Add(newArray);
 
-                PopulateAssetArray(newArray, sourcePath);
+                PopulateAssetArray(newArray, bundleToAddPath);
             }
 
             if (conversion)
             {
-                (FileInfo converted, string newHash) = PerformConversion(sourcePath, asset);
+                (FileInfo converted, string newHash) = PerformConversion(bundleToAddPath, asset);
                 string newAssetPath = GetAssetPath(newHash);
-                CopyToOutput(converted, outputBundleDir, newAssetPath);
+                CopyToOutput(converted, outputBundleDirInfo, newAssetPath);
             }
             else
             {
-                CopyToOutput(sourcePath, outputBundleDir, assetPath);
+                CopyToOutput(bundleToAddPath, outputBundleDirInfo, assetPath);
             }
         }
 
@@ -130,7 +87,10 @@ public class MergeCommand : Command
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
-        string outputPath = Path.Join(outputManifestDir.FullName, inputPath.Name);
+        string outputPath = Path.Join(
+            Path.GetDirectoryName(outputBundleDir),
+            Path.GetFileName(sourcePath)
+        );
 
         MemoryStream ms = new();
         targetHelper.Write(ms);
@@ -138,7 +98,7 @@ public class MergeCommand : Command
         byte[] decrypted = ms.ToArray();
         byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
 
-        Console.WriteLine("Writing output to {0}", outputPath);
+        ConsoleApp.Log($"Writing output to {outputPath}");
         File.WriteAllBytes(outputPath, encrypted);
     }
 
@@ -156,7 +116,7 @@ public class MergeCommand : Command
             .Except(targetAssets, ManifestAssetComparer.Instance)
             .ToList();
 
-        Console.WriteLine($"Found {assetsToAdd.Count} assets to add to {pathName}");
+        ConsoleApp.Log($"Found {assetsToAdd.Count} assets to add to {pathName}");
 
         return assetsToAdd;
     }
@@ -197,11 +157,11 @@ public class MergeCommand : Command
         File.Copy(sourcePath.FullName, newPath, overwrite: true);
     }
 
-    private static FileInfo GetSourceFile(string assetPath, IEnumerable<DirectoryInfo> directories)
+    private static FileInfo GetSourceFile(string assetPath, IEnumerable<string> directories)
     {
-        foreach (DirectoryInfo directory in directories)
+        foreach (string directory in directories)
         {
-            string path = Path.Join(directory.FullName, assetPath);
+            string path = Path.Join(directory, assetPath);
             if (File.Exists(path))
             {
                 return new FileInfo(path);

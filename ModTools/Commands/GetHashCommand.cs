@@ -1,25 +1,18 @@
-using System.CommandLine;
-using System.Security.Cryptography;
 using ModTools.Shared;
 
 namespace ModTools.Commands;
 
-public class GetHashCommand : Command
+internal sealed class GetHashCommand
 {
-    public GetHashCommand()
-        : base("hash", "Get the hashed filename of an assetbundle.")
+    /// <summary>
+    /// Get the hash of an asset bundle.
+    /// </summary>
+    /// <param name="assetBundlePath">The path to the asset bundle to get the hash of.</param>
+    [Command("hash")]
+    public void Command([Argument] string assetBundlePath)
     {
-        Argument<FileInfo> assetBundleArgument =
-            new("assetbundle", description: "The asset bundle to get the hash of.");
-
-        this.AddArgument(assetBundleArgument);
-
-        this.SetHandler(DoHash, assetBundleArgument);
-    }
-
-    private static void DoHash(FileInfo assetBundle)
-    {
-        string hashName = HashHelper.GetHash(assetBundle);
-        Console.WriteLine(hashName);
+        FileInfo inputFileInfo = new(assetBundlePath);
+        string hashName = HashHelper.GetHash(inputFileInfo);
+        ConsoleApp.Log(hashName);
     }
 }

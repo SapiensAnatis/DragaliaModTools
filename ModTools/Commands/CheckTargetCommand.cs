@@ -1,25 +1,19 @@
-﻿using System.CommandLine;
-using AssetsTools.NET.Extra;
+﻿using AssetsTools.NET.Extra;
 using ModTools.Shared;
 
 namespace ModTools.Commands;
 
-public class CheckTargetCommand : Command
+internal sealed class CheckTargetCommand
 {
-    public CheckTargetCommand()
-        : base("check-target", "Check the runtime target of asset bundles recursively.")
-    {
-        Argument<DirectoryInfo> directory = new("directory", "The directory to check assets in.");
-
-        this.AddArgument(directory);
-
-        this.SetHandler(DoCheck, directory);
-    }
-
-    private static void DoCheck(DirectoryInfo checkDirectory)
+    /// <summary>
+    /// Check the platform target asset bundles within a directory.
+    /// </summary>
+    /// <param name="directory">The directory to scan.</param>
+    [Command("check-target")]
+    public void Command([Argument] string directory)
     {
         IEnumerable<FileInfo> filePaths = Directory
-            .GetFiles(checkDirectory.FullName, "*", SearchOption.AllDirectories)
+            .GetFiles(directory, "*", SearchOption.AllDirectories)
             .Select(x => new FileInfo(x))
             .Where(x => string.IsNullOrEmpty(x.Extension));
 
@@ -30,7 +24,7 @@ public class CheckTargetCommand : Command
 
             foreach (AssetsFileInstance fileInstance in helper.FileInstances)
             {
-                Console.WriteLine(
+                ConsoleApp.Log(
                     $"{path} -> {fileInstance.name}: target {fileInstance.file.Metadata.TargetPlatform}"
                 );
             }

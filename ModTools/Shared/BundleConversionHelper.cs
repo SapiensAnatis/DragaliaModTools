@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-using AssetsTools.NET.Extra;
+﻿using AssetsTools.NET.Extra;
 
 namespace ModTools.Shared;
 
@@ -31,7 +24,7 @@ internal static class BundleConversionHelper
                 || fileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Count != 0
             )
             {
-                Console.WriteLine(
+                ConsoleApp.Log(
                     $"[WARNING] Shaders detected in asset {fileInstance.name} of bundle {bundleHelper.Path}"
                 );
             }

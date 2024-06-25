@@ -1,57 +1,36 @@
-using System.CommandLine;
-using System.Runtime.CompilerServices;
 using AssetsTools.NET;
 using ModTools.Shared;
 
 namespace ModTools.Commands.Manifest;
 
-public class EditCommand : Command
+internal sealed class EditCommand
 {
-    public EditCommand()
-        : base("edit-master", "Update the master asset's hash and size in a manifest.")
+    /// <summary>
+    /// Update the master asset's hash and size in a manifest.
+    /// </summary>
+    /// <param name="manifestPath">The path to the manifest to update.</param>
+    /// <param name="masterPath">--master|-m The path to the master asset to update with.</param>
+    /// <param name="outputPath">--output|-o The path to write the updated manifest to.</param>
+    [Command("edit-master")]
+    public void Command([Argument] string manifestPath, string masterPath, string outputPath)
     {
-        Argument<FileInfo> manifestArgument =
-            new("manifest", description: "Path to the encrypted manifest to update.");
+        using AssetBundleHelper manifestHelper = AssetBundleHelper.FromPathEncrypted(manifestPath);
+        FileInfo masterFileInfo = new(masterPath);
 
-        Argument<FileInfo> assetBundleArgument =
-            new("assetbundle", description: "The asset bundle to update with.");
-
-        Argument<FileInfo> outputArgument =
-            new("output", description: "The path to save the result to.");
-
-        EncryptedAssetBundleHelperBinder manifestBinder = new(manifestArgument);
-
-        AddArgument(manifestArgument);
-        AddArgument(assetBundleArgument);
-        AddArgument(outputArgument);
-
-        this.SetHandler(DoEdit, manifestBinder, assetBundleArgument, outputArgument);
-    }
-
-    private static void DoEdit(
-        AssetBundleHelper manifestHelper,
-        FileInfo assetBundlePath,
-        FileInfo outputPath
-    )
-    {
         AssetTypeValueField manifestField = manifestHelper.GetBaseField("manifest");
 
         AssetTypeValueField? master = manifestField["categories"]["Array"][0]["assets"]["Array"][0];
 
-        Console.WriteLine(
-            "Updating master hash and size from [{0}, {1}] to [{2}, {3}]",
-            master["hash"].AsString,
-            master["size"].AsInt,
-            assetBundlePath.Name,
-            assetBundlePath.Length
+        ConsoleApp.Log(
+            $"Updating master hash and size from [{master["hash"].AsString}, {master["size"].AsInt}] to [{masterFileInfo.Name}, {masterFileInfo.Length}]"
         );
 
-        master["hash"].AsString = assetBundlePath.Name;
-        master["size"].AsInt = (int)assetBundlePath.Length;
+        master["hash"].AsString = masterFileInfo.Name;
+        master["size"].AsInt = (int)masterFileInfo.Length;
 
         manifestHelper.UpdateBaseField("manifest", manifestField);
 
-        Console.WriteLine("Encrypting output");
+        ConsoleApp.Log("Encrypting output");
 
         MemoryStream ms = new();
         manifestHelper.Write(ms);
@@ -59,7 +38,7 @@ public class EditCommand : Command
         byte[] decrypted = ms.ToArray();
         byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
 
-        Console.WriteLine("Writing output to {0}", outputPath);
-        File.WriteAllBytes(outputPath.FullName, encrypted);
+        ConsoleApp.Log($"Writing output to {outputPath}");
+        File.WriteAllBytes(outputPath, encrypted);
     }
 }

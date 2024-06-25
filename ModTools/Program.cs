@@ -1,29 +1,24 @@
-﻿using System.CommandLine;
-using System.CommandLine.Binding;
-using System.Data;
-using System.Runtime.CompilerServices;
-using AssetsTools.NET;
+﻿using ModTools;
 using ModTools.Commands;
 using ModTools.Commands.Banner;
 using ModTools.Commands.Manifest;
-using SerializableDictionaryPlugin;
 
-namespace ModTools;
+var app = ConsoleApp.Create();
 
-internal sealed class Program
-{
-    private static async Task<int> Main(string[] args)
-    {
-        RootCommand rootCommand = new("Dragalia modding utility.");
+ConsoleApp.JsonSerializerOptions = ModToolsSerializerContext.Default.Options;
 
-        rootCommand.AddCommand(new ImportDictionaryCommand());
-        rootCommand.AddCommand(new ImportMultipleDictionaryCommand());
-        rootCommand.AddCommand(new GetHashCommand());
-        rootCommand.AddCommand(new ManifestCommand());
-        rootCommand.AddCommand(new ConvertBundleCommand());
-        rootCommand.AddCommand(new CheckTargetCommand());
-        rootCommand.AddCommand(new BannerCommand());
+app.UseFilter<ExceptionHandlerFilter>();
 
-        return await rootCommand.InvokeAsync(args).ConfigureAwait(false);
-    }
-}
+app.Add<CheckTargetCommand>();
+app.Add<ConvertBundleCommand>();
+app.Add<GetHashCommand>();
+app.Add<ImportDictionaryCommand>();
+app.Add<ImportMultipleDictionaryCommand>();
+app.Add<BannerCommand>();
+
+app.Add<DecryptCommand>("manifest");
+app.Add<EditCommand>("manifest");
+app.Add<MergeCommand>("manifest");
+app.Add<VerifyCommand>("manifest");
+
+await app.RunAsync(args).ConfigureAwait(false);

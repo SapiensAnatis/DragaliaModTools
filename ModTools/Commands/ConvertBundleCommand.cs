@@ -1,33 +1,20 @@
-﻿using System.CommandLine;
-using System.Runtime.CompilerServices;
-using AssetsTools.NET.Extra;
-using ModTools.Shared;
-using Org.BouncyCastle.Asn1.X509;
+﻿using ModTools.Shared;
 
 namespace ModTools.Commands;
 
-public class ConvertBundleCommand : Command
+internal sealed class ConvertBundleCommand
 {
-    public ConvertBundleCommand()
-        : base("convert", "Converts an Android asset bundle to iOS.")
+    /// <summary>
+    /// Converts an Android asset bundle to iOS.
+    /// </summary>
+    /// <param name="assetBundlePath">The path to the bundle to convert.</param>
+    /// <param name="outputPath">-o, The desired output path for the converted bundle.</param>
+    [Command("convert")]
+    public void Command([Argument] string assetBundlePath, string outputPath)
     {
-        Argument<FileInfo> inputPathArgument = new("bundle", "Path to target asset bundle.");
-        Argument<FileInfo> outputPathArgument = new("output", "Desired output path.");
+        using AssetBundleHelper bundleHelper = AssetBundleHelper.FromPath(assetBundlePath);
+        FileInfo outputFileInfo = new(outputPath);
 
-        AssetBundleHelperBinder helperBinder = new(inputPathArgument);
-
-        this.AddArgument(inputPathArgument);
-        this.AddArgument(outputPathArgument);
-
-        this.SetHandler(DoConversion, inputPathArgument, outputPathArgument, helperBinder);
-    }
-
-    private static void DoConversion(
-        FileInfo inputPath,
-        FileInfo outputPath,
-        AssetBundleHelper bundleHelper
-    )
-    {
-        BundleConversionHelper.ConvertToIos(bundleHelper, outputPath);
+        BundleConversionHelper.ConvertToIos(bundleHelper, outputFileInfo);
     }
 }
