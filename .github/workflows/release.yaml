@@ -23,6 +23,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           PRERELEASE: ${{ inputs.prerelease }}
+          MAJOR_STRING_TOKEN: "BREAKING CHANGE"
     outputs:
       new_tag: ${{ steps.tag.outputs.new_tag }}
   
@@ -50,7 +51,7 @@ jobs:
           dotnet-version: 8.0
 
       - name: Install dependencies
-        run: dotnet restore -r ${{ matrix.os.rid }}
+        run: dotnet restore ModTools/ModTools.csproj -r ${{ matrix.os.rid }}
 
       - name: Publish
         run: dotnet publish ModTools/ModTools.csproj -c Release --no-restore -o ./${{ matrix.os.rid }} -r ${{ matrix.os.rid }} --no-self-contained
