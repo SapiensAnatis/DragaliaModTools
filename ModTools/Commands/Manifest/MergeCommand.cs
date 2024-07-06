@@ -10,12 +10,12 @@ internal sealed class MergeCommand
     /// <summary>
     /// Update the target manifest by adding any files only present in the source manifest.
     /// </summary>
-    /// <param name="targetPath">--target|-t The path to the manifest that is the target of the merge.</param>
-    /// <param name="sourcePath">--source|-s The path to the manifest that is the source of the merge.</param>
-    /// <param name="outputManifestDir">--output-manifests|-m The path to a directory to output the merged manifest to.</param>
-    /// <param name="outputBundleDir">--output-bundles|-b The path to a directory to output the new bundles to.</param>
-    /// <param name="assetDirectories">--assets-path|-a Comma-separated list of directories to source the added asset bundles from.</param>
-    /// <param name="conversion">--convert|-c Whether to convert assets to iOS during the merge process.</param>
+    /// <param name="targetPath">--target|-t, The path to the manifest that is the target of the merge.</param>
+    /// <param name="sourcePath">--source|-s, The path to the manifest that is the source of the merge.</param>
+    /// <param name="outputManifestDir">--output-manifests|-m, The path to a directory to output the merged manifest to.</param>
+    /// <param name="outputBundleDir">--output-bundles|-b, The path to a directory to output the new bundles to.</param>
+    /// <param name="assetDirectories">--assets-path|-a, Comma-separated list of directories to source the added asset bundles from.</param>
+    /// <param name="conversion">--convert|-c, Whether to convert assets to iOS during the merge process.</param>
     [Command("merge")]
     public void Command(
         string targetPath,

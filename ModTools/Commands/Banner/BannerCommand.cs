@@ -11,8 +11,8 @@ internal sealed class BannerCommand
     /// Update the master asset with information from a banner.json configuration file.
     /// </summary>
     /// <param name="bannerPath">The path to the banner.json configuration.</param>
-    /// <param name="masterPath">--master|-m The path to the master asset bundle to update.</param>
-    /// <param name="outputPath">--output|-o The path to write the updated master asset bundle.</param>
+    /// <param name="masterPath">--master|-m, The path to the master asset bundle to update.</param>
+    /// <param name="outputPath">--output|-o, The path to write the updated master asset bundle.</param>
     [Command("banner")]
     public void Command([Argument] string bannerPath, string masterPath, string outputPath)
     {

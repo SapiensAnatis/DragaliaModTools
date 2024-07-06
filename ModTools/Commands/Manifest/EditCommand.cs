@@ -9,8 +9,8 @@ internal sealed class EditCommand
     /// Update the master asset's hash and size in a manifest.
     /// </summary>
     /// <param name="manifestPath">The path to the manifest to update.</param>
-    /// <param name="masterPath">--master|-m The path to the master asset to update with.</param>
-    /// <param name="outputPath">--output|-o The path to write the updated manifest to.</param>
+    /// <param name="masterPath">--master|-m, The path to the master asset to update with.</param>
+    /// <param name="outputPath">--output|-o, The path to write the updated manifest to.</param>
     [Command("edit-master")]
     public void Command([Argument] string manifestPath, string masterPath, string outputPath)
     {

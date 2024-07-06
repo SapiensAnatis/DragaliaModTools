@@ -10,8 +10,8 @@ internal sealed class ImportMultipleDictionaryCommand
     /// Import a directory of serializable dictionary files into an asset bundle.
     /// </summary>
     /// <param name="assetBundlePath">The path to the asset bundle to open.</param>
-    /// <param name="directory">-d The path to the directory containing the dictionary JSON files to import.</param>
-    /// <param name="outputPath">--output|-o The path to write the output asset to.</param>
+    /// <param name="directory">-d, The path to the directory containing the dictionary JSON files to import.</param>
+    /// <param name="outputPath">--output|-o, The path to write the output asset to.</param>
     [Command("import-multiple")]
     public void Command([Argument] string assetBundlePath, string directory, string outputPath)
     {

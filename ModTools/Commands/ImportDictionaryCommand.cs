@@ -10,10 +10,10 @@ internal sealed class ImportDictionaryCommand
     /// Import a single serialized dictionary over an asset.
     /// </summary>
     /// <param name="assetBundlePath">The path of the bundle to import into.</param>
-    /// <param name="assetName">--asset|-a The asset to import over.</param>
-    /// <param name="dictionaryPath">--dictionary|-d The path to the JSON dictionary file to import.</param>
-    /// <param name="outputPath">--output|-o The desired output path.</param>
-    /// <param name="inplace">-i Whether to write to the input path in-place. If specified, ignores --output / -o.</param>
+    /// <param name="assetName">--asset|-a, The asset to import over.</param>
+    /// <param name="dictionaryPath">--dictionary|-d, The path to the JSON dictionary file to import.</param>
+    /// <param name="outputPath">--output|-o, The desired output path.</param>
+    /// <param name="inplace">-i, Whether to write to the input path in-place. If specified, ignores --output / -o.</param>
     [Command("import")]
     public void Command(
         [Argument] string assetBundlePath,
