@@ -29,11 +29,11 @@ internal static class RijndaelHelper
 
         return final;
     }
-    
+
     public static byte[] Decrypt(ReadOnlySpan<byte> encrypted)
     {
         PaddedBufferedBlockCipher cipher = CreateCipher(forEncryption: false);
-        
+
         // The file contains a SHA256 hash as the final 32 bytes - this should be removed before decrypting.
         int dataSize = encrypted.Length - 32;
         int outputSize = cipher.GetOutputSize(dataSize);

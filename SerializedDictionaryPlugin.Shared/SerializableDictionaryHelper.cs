@@ -76,17 +76,17 @@ public static partial class SerializableDictionaryHelper
         AssetTypeValueField dict = baseField["dict"];
         int count = dict["count"].AsInt;
 
-        IEnumerable<string> keys = dict["entriesKey.Array"].Children
-            .Select(x => x.AsString)
+        IEnumerable<string> keys = dict["entriesKey.Array"]
+            .Children.Select(x => x.AsString)
             .Take(count);
-        IEnumerable<JsonElement> values = dict["entriesValue.Array"].Children.Select(
-            x =>
+        IEnumerable<JsonElement> values = dict["entriesValue.Array"]
+            .Children.Select(x =>
                 JsonSerializer.SerializeToElement(
                     x.Children.ToDictionary(c => c.FieldName, GetPrimitiveFieldValue),
                     typeof(Dictionary<string, object>),
                     SharedSerializerContext.Default
                 )
-        );
+            );
 
         Dictionary<string, JsonElement> newDict = keys.Zip(values)
             .ToDictionary(x => x.First, x => x.Second);

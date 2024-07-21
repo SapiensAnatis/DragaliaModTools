@@ -30,7 +30,7 @@ internal sealed class AssetBundleHelper : IDisposable
                 ConsoleApp.Log($"Skipping streamed assets file instance {name} at index {idx}");
                 continue;
             }
-            
+
             AssetsFileInstance instance;
             try
             {
@@ -42,9 +42,7 @@ internal sealed class AssetBundleHelper : IDisposable
             }
             catch
             {
-                ConsoleApp.LogError(
-                    $"[ERROR] Failed to load file instance {name} at index {idx}"
-                );
+                ConsoleApp.LogError($"[ERROR] Failed to load file instance {name} at index {idx}");
                 throw;
             }
 
@@ -67,22 +65,24 @@ internal sealed class AssetBundleHelper : IDisposable
     {
         FileInfo fileInfo = new(path);
         int fileSize = checked((int)fileInfo.Length);
-        
+
         byte[] encryptedArray = ArrayPool<byte>.Shared.Rent(fileSize);
-        Span<byte> encryptedSpan = new(encryptedArray, 0, fileSize); 
+        Span<byte> encryptedSpan = new(encryptedArray, 0, fileSize);
 
         using FileStream encryptedFs = File.OpenRead(path);
-        int bytesRead  = encryptedFs.Read(encryptedSpan);
-        
+        int bytesRead = encryptedFs.Read(encryptedSpan);
+
         if (bytesRead < fileSize)
         {
-            throw new IOException($"Failed to read all of the file: read {bytesRead} bytes, but expected {fileSize} bytes");
+            throw new IOException(
+                $"Failed to read all of the file: read {bytesRead} bytes, but expected {fileSize} bytes"
+            );
         }
-        
+
         byte[] data = RijndaelHelper.Decrypt(encryptedSpan);
 
         ArrayPool<byte>.Shared.Return(encryptedArray);
-        
+
         return FromData(data, path);
     }
 

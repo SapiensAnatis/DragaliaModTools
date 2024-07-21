@@ -175,9 +175,7 @@ internal sealed class MergeCommand
     {
         var newArray = newAssetVector["Array"];
 
-        using AssetBundleHelper helper = AssetBundleHelper.FromPath(
-            bundlePath.FullName
-        );
+        using AssetBundleHelper helper = AssetBundleHelper.FromPath(bundlePath.FullName);
 
         var containers = helper
             .GetAllBaseFields(0)
