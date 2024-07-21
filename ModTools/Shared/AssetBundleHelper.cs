@@ -59,13 +59,28 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public static AssetBundleHelper FromPathEncrypted(string path)
     {
-        byte[] encrypted = File.ReadAllBytes(path);
-        byte[] data = RijndaelHelper.Decrypt(encrypted);
+        FileInfo fileInfo = new(path);
+        int fileSize = checked((int)fileInfo.Length);
+        
+        byte[] encryptedArray = ArrayPool<byte>.Shared.Rent(fileSize);
+        Span<byte> encryptedSpan = new(encryptedArray, 0, fileSize); 
 
+        using FileStream encryptedFs = File.OpenRead(path);
+        int bytesRead  = encryptedFs.Read(encryptedSpan);
+        
+        if (bytesRead < fileSize)
+        {
+            throw new IOException($"Failed to read all of the file: read {bytesRead} bytes, but expected {fileSize} bytes");
+        }
+        
+        byte[] data = RijndaelHelper.Decrypt(encryptedSpan);
+
+        ArrayPool<byte>.Shared.Return(encryptedArray);
+        
         return FromData(data, path);
     }
 
-    public static AssetBundleHelper FromData(byte[] data, string path)
+    private static AssetBundleHelper FromData(byte[] data, string path)
     {
         MemoryStream bundleMemoryStream = new(data);
 
