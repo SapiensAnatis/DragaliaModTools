@@ -18,7 +18,7 @@ internal static class RijndaelHelper
 
     public static byte[] Encrypt(byte[] source)
     {
-        PaddedBufferedBlockCipher cipher = CreateCiper(forEncryption: true);
+        PaddedBufferedBlockCipher cipher = CreateCipher(forEncryption: true);
 
         byte[] encrypted = cipher.DoFinal(source);
         byte[] hash = SHA256.HashData(encrypted);
@@ -29,14 +29,23 @@ internal static class RijndaelHelper
 
         return final;
     }
-
-    public static byte[] Decrypt(byte[] encrypted)
+    
+    public static byte[] Decrypt(ReadOnlySpan<byte> encrypted)
     {
-        PaddedBufferedBlockCipher cipher = CreateCiper(forEncryption: false);
-        return cipher.DoFinal(encrypted[..^32]); // Subtract SHA256 hash
+        PaddedBufferedBlockCipher cipher = CreateCipher(forEncryption: false);
+        
+        // The file contains a SHA256 hash as the final 32 bytes - this should be removed before decrypting.
+        int dataSize = encrypted.Length - 32;
+        int outputSize = cipher.GetOutputSize(dataSize);
+        byte[] outputBuffer = new byte[outputSize];
+
+        Span<byte> output = new(outputBuffer);
+        cipher.DoFinal(encrypted[..dataSize], output);
+
+        return outputBuffer;
     }
 
-    private static PaddedBufferedBlockCipher CreateCiper(bool forEncryption)
+    public static PaddedBufferedBlockCipher CreateCipher(bool forEncryption)
     {
         RijndaelEngine engine = new(256);
         CbcBlockCipher blockCiper = new(engine);
