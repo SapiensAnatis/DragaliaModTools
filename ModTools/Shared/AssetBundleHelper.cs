@@ -1,4 +1,5 @@
-﻿using AssetsTools.NET;
+﻿using System.Buffers;
+using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
 namespace ModTools.Shared;
@@ -24,6 +25,12 @@ internal sealed class AssetBundleHelper : IDisposable
                 .Select((x, idx) => (x, idx))
         )
         {
+            if (name.EndsWith(".resS", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ConsoleApp.Log($"Skipping streamed assets file instance {name} at index {idx}");
+                continue;
+            }
+            
             AssetsFileInstance instance;
             try
             {
@@ -35,7 +42,7 @@ internal sealed class AssetBundleHelper : IDisposable
             }
             catch
             {
-                Console.Error.WriteLine(
+                ConsoleApp.LogError(
                     $"[ERROR] Failed to load file instance {name} at index {idx}"
                 );
                 throw;
@@ -43,8 +50,7 @@ internal sealed class AssetBundleHelper : IDisposable
 
             if (instance == null)
             {
-                // Probably a .resS file
-                ConsoleApp.Log($"Skipping file instance {name} at index {idx}");
+                ConsoleApp.LogError($"[WARNING] Skipping null file instance {name} at index {idx}");
                 continue;
             }
 
