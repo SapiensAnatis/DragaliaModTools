@@ -88,7 +88,7 @@ internal sealed class MergeCommand
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
         string outputPath = Path.Join(
-            Path.GetDirectoryName(outputBundleDir),
+            Path.GetDirectoryName(outputManifestDir),
             Path.GetFileName(sourcePath)
         );
 
