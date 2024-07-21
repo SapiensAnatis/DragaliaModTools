@@ -6,8 +6,7 @@ internal static class BundleConversionHelper
 {
     public static void ConvertToIos(FileInfo input, FileInfo output)
     {
-        using AssetBundleHelper bundleHelper = AssetBundleHelper.FromData(
-            File.ReadAllBytes(input.FullName),
+        using AssetBundleHelper bundleHelper = AssetBundleHelper.FromPath(
             input.FullName
         );
 

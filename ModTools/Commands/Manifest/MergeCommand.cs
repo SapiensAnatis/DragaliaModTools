@@ -174,10 +174,8 @@ internal sealed class MergeCommand
     private static void PopulateAssetArray(AssetTypeValueField newAssetVector, FileInfo bundlePath)
     {
         var newArray = newAssetVector["Array"];
-        byte[] bundleData = File.ReadAllBytes(bundlePath.FullName);
 
-        using AssetBundleHelper helper = AssetBundleHelper.FromData(
-            bundleData,
+        using AssetBundleHelper helper = AssetBundleHelper.FromPath(
             bundlePath.FullName
         );
 
