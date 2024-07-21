@@ -177,10 +177,7 @@ internal sealed class MergeCommand
 
         using AssetBundleHelper helper = AssetBundleHelper.FromPath(bundlePath.FullName);
 
-        var containers = helper
-            .GetAllBaseFields(0)
-            .Select(GetContainer)
-            .Where(x => x != null)
+        var newElements = GetContainerNames(helper.GetAllBaseFields(0))
             .Select(x =>
             {
                 var newValue = ValueBuilder.DefaultValueFieldFromArrayTemplate(newArray);
@@ -188,7 +185,26 @@ internal sealed class MergeCommand
                 return newValue;
             });
 
-        newArray.Children.AddRange(containers);
+        newArray.Children.AddRange(newElements);
+        return;
+
+        static IEnumerable<string> GetContainerNames(IEnumerable<AssetTypeValueField> fields)
+        {
+            foreach (AssetTypeValueField assetField in fields)
+            {
+                if (assetField["m_Container"] is not { IsDummy: false } container)
+                    continue;
+
+                string containerName = container[0][0][0].AsString;
+                containerName = containerName.Replace(
+                    "assets/_gluonresources/",
+                    "",
+                    StringComparison.Ordinal
+                );
+                containerName = containerName.Replace("resources/", "", StringComparison.Ordinal);
+                yield return containerName;
+            }
+        }
     }
 
     private static string? GetContainer(AssetTypeValueField assetField)
