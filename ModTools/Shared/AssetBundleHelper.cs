@@ -112,12 +112,21 @@ internal sealed class AssetBundleHelper : IDisposable
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
-    public IEnumerable<AssetTypeValueField> GetAllBaseFields(int fileIndex = 0)
+    public IEnumerable<string> GetContainerNames(int fileIndex = 0)
     {
-        return this.FileInstances[fileIndex]
-            .file.AssetInfos.Select(x =>
-                this.manager.GetBaseField(this.FileInstances[fileIndex], x)
-            );
+        AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
+
+        var assetBundleInfo = this.manager.GetBaseField(
+            assetsFileInstance,
+            assetsFileInstance.file.GetAssetInfo(pathId: 1)
+        );
+
+        var container = assetBundleInfo["m_Container.Array"];
+        foreach (var containerChild in container.Children)
+        {
+            string name = containerChild[0].AsString;
+            yield return name;
+        }
     }
 
     public AssetTypeValueField GetBaseField(string assetName, int fileIndex = 0)

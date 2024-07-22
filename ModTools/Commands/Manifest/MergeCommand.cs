@@ -186,9 +186,8 @@ internal sealed class MergeCommand
     {
         var newArray = newAssetVector["Array"];
 
-        using AssetBundleHelper helper = AssetBundleHelper.FromPath(bundlePath.FullName);
-
-        var newElements = GetContainerNames(helper.GetAllBaseFields(0))
+        var newElements = helper
+            .GetContainerNames()
             .Select(x =>
             {
                 var newValue = ValueBuilder.DefaultValueFieldFromArrayTemplate(newArray);
@@ -197,40 +196,6 @@ internal sealed class MergeCommand
             });
 
         newArray.Children.AddRange(newElements);
-        return;
-
-        static IEnumerable<string> GetContainerNames(IEnumerable<AssetTypeValueField> fields)
-        {
-            foreach (AssetTypeValueField assetField in fields)
-            {
-                if (assetField["m_Container"] is not { IsDummy: false } container)
-                    continue;
-
-                string containerName = container[0][0][0].AsString;
-                containerName = containerName.Replace(
-                    "assets/_gluonresources/",
-                    "",
-                    StringComparison.Ordinal
-                );
-                containerName = containerName.Replace("resources/", "", StringComparison.Ordinal);
-                yield return containerName;
-            }
-        }
-    }
-
-    private static string? GetContainer(AssetTypeValueField assetField)
-    {
-        if (assetField["m_Container"] is not { IsDummy: false } container)
-            return null;
-
-        string containerName = container[0][0][0].AsString;
-        containerName = containerName.Replace(
-            "assets/_gluonresources/",
-            "",
-            StringComparison.Ordinal
-        );
-        containerName = containerName.Replace("resources/", "", StringComparison.Ordinal);
-        return containerName;
     }
 }
 
