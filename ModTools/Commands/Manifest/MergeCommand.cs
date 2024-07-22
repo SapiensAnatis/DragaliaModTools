@@ -57,6 +57,10 @@ internal sealed class MergeCommand
             // TODO multiple paths support again
             FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
 
+            using AssetBundleHelper openedBundle = AssetBundleHelper.FromPath(
+                bundleToAddPath.FullName
+            );
+
             if (asset["assets"].IsDummy)
             {
                 var newArray = ValueBuilder.DefaultValueFieldFromTemplate(
@@ -64,12 +68,12 @@ internal sealed class MergeCommand
                 );
                 asset.Children.Add(newArray);
 
-                PopulateAssetArray(newArray, bundleToAddPath);
+                PopulateAssetArray(newArray, openedBundle);
             }
 
             if (conversion)
             {
-                (FileInfo converted, string newHash) = PerformConversion(bundleToAddPath, asset);
+                (FileInfo converted, string newHash) = PerformConversion(openedBundle, asset);
                 string newAssetPath = GetAssetPath(newHash);
                 CopyToOutput(converted, outputBundleDirInfo, newAssetPath);
             }
@@ -131,14 +135,14 @@ internal sealed class MergeCommand
     }
 
     private static (FileInfo convertedPath, string newHash) PerformConversion(
-        FileInfo sourcePath,
+        AssetBundleHelper bundle,
         AssetTypeValueField asset
     )
     {
         string tempFileName = Path.GetTempFileName();
         FileInfo outputFileInfo = new(tempFileName);
 
-        BundleConversionHelper.ConvertToIos(sourcePath, outputFileInfo);
+        BundleConversionHelper.ConvertToIos(bundle, outputFileInfo);
         string newHash = HashHelper.GetHash(outputFileInfo);
         asset["hash"].AsString = newHash;
 
@@ -175,7 +179,10 @@ internal sealed class MergeCommand
         throw new IOException($"Failed to find asset {assetPath} in any configured directory");
     }
 
-    private static void PopulateAssetArray(AssetTypeValueField newAssetVector, FileInfo bundlePath)
+    private static void PopulateAssetArray(
+        AssetTypeValueField newAssetVector,
+        AssetBundleHelper helper
+    )
     {
         var newArray = newAssetVector["Array"];
 
