@@ -58,6 +58,18 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public static AssetBundleHelper FromPath(string path)
     {
+        if (SharedOptionContext.ReadFromDisk)
+        {
+            // Read from disk instead
+            AssetsManager manager = new();
+
+#pragma warning disable CA2000 // CA2000: Dispose objects before losing scope. Ownership of the stream is transferred to the AssetBundleHelper, which will dispose of it in its own Dispose method.
+            BundleFileInstance bundleFileInstance = new(File.OpenRead(path), unpackIfPacked: true);
+#pragma warning restore CA2000
+
+            return new AssetBundleHelper(manager, bundleFileInstance);
+        }
+
         return FromData(File.ReadAllBytes(path), path);
     }
 
@@ -82,6 +94,10 @@ internal sealed class AssetBundleHelper : IDisposable
         byte[] data = RijndaelHelper.Decrypt(encryptedSpan);
 
         ArrayPool<byte>.Shared.Return(encryptedArray);
+
+        /* We could respect GlobalOptionContext.LowMemoryMode here and write the decrypted data to a temporary file,
+         * then use that as the backing stream, but this is only called once per command and is unlikely to make up
+         * any significant proportion of the memory usage. */
 
         return FromData(data, path);
     }
@@ -141,17 +157,6 @@ internal sealed class AssetBundleHelper : IDisposable
         newUncompressedBundle.Read(reader);
         using AssetsFileWriter writer = new(stream);
         newUncompressedBundle.Pack(writer, AssetBundleCompressionType.LZ4);
-    }
-
-    public void WriteEncrypted(Stream stream)
-    {
-        MemoryStream ms = new();
-        this.Write(ms);
-
-        byte[] decrypted = ms.ToArray();
-        byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
-
-        stream.Write(encrypted);
     }
 
     private AssetFileInfo GetFileInfo(string assetName, int fileIndex)
