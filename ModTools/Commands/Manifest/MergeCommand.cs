@@ -94,8 +94,9 @@ internal sealed class MergeCommand
         targetBaseField["rawAssets"]["Array"].Children.AddRange(rawsToAdd);
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
-        
+
         Directory.CreateDirectory(outputManifestDir);
+
         string outputPath = Path.Join(
             Path.GetDirectoryName(outputManifestDir),
             Path.GetFileName(sourcePath)
