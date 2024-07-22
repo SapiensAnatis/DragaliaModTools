@@ -188,10 +188,14 @@ internal sealed class MergeCommand
 
         var newElements = helper
             .GetContainerNames()
-            .Select(x =>
+            .Select(containerName =>
             {
+                string arrayValue = containerName
+                    .Replace("assets/_gluonresources/", "", StringComparison.Ordinal)
+                    .Replace("resources/", "", StringComparison.Ordinal);
+
                 var newValue = ValueBuilder.DefaultValueFieldFromArrayTemplate(newArray);
-                newValue.Value.AsString = x;
+                newValue.Value.AsString = arrayValue;
                 return newValue;
             });
 
