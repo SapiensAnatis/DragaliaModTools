@@ -1,4 +1,5 @@
-﻿using AssetsTools.NET;
+﻿using System.Buffers;
+using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
 namespace ModTools.Shared;
@@ -24,6 +25,12 @@ internal sealed class AssetBundleHelper : IDisposable
                 .Select((x, idx) => (x, idx))
         )
         {
+            if (name.EndsWith(".resS", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ConsoleApp.Log($"Skipping streamed assets file instance {name} at index {idx}");
+                continue;
+            }
+
             AssetsFileInstance instance;
             try
             {
@@ -35,16 +42,13 @@ internal sealed class AssetBundleHelper : IDisposable
             }
             catch
             {
-                Console.Error.WriteLine(
-                    $"[ERROR] Failed to load file instance {name} at index {idx}"
-                );
+                ConsoleApp.LogError($"[ERROR] Failed to load file instance {name} at index {idx}");
                 throw;
             }
 
             if (instance == null)
             {
-                // Probably a .resS file
-                ConsoleApp.Log($"Skipping file instance {name} at index {idx}");
+                ConsoleApp.LogError($"[WARNING] Skipping null file instance {name} at index {idx}");
                 continue;
             }
 
@@ -54,18 +58,51 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public static AssetBundleHelper FromPath(string path)
     {
+        if (SharedOptionContext.ReadFromDisk)
+        {
+            // Read from disk instead
+            AssetsManager manager = new();
+
+#pragma warning disable CA2000 // CA2000: Dispose objects before losing scope. Ownership of the stream is transferred to the AssetBundleHelper, which will dispose of it in its own Dispose method.
+            BundleFileInstance bundleFileInstance = new(File.OpenRead(path), unpackIfPacked: true);
+#pragma warning restore CA2000
+
+            return new AssetBundleHelper(manager, bundleFileInstance);
+        }
+
         return FromData(File.ReadAllBytes(path), path);
     }
 
     public static AssetBundleHelper FromPathEncrypted(string path)
     {
-        byte[] encrypted = File.ReadAllBytes(path);
-        byte[] data = RijndaelHelper.Decrypt(encrypted);
+        FileInfo fileInfo = new(path);
+        int fileSize = checked((int)fileInfo.Length);
+
+        byte[] encryptedArray = ArrayPool<byte>.Shared.Rent(fileSize);
+        Span<byte> encryptedSpan = new(encryptedArray, 0, fileSize);
+
+        using FileStream encryptedFs = File.OpenRead(path);
+        int bytesRead = encryptedFs.Read(encryptedSpan);
+
+        if (bytesRead < fileSize)
+        {
+            throw new IOException(
+                $"Failed to read all of the file: read {bytesRead} bytes, but expected {fileSize} bytes"
+            );
+        }
+
+        byte[] data = RijndaelHelper.Decrypt(encryptedSpan);
+
+        ArrayPool<byte>.Shared.Return(encryptedArray);
+
+        /* We could respect GlobalOptionContext.LowMemoryMode here and write the decrypted data to a temporary file,
+         * then use that as the backing stream, but this is only called once per command and is unlikely to make up
+         * any significant proportion of the memory usage. */
 
         return FromData(data, path);
     }
 
-    public static AssetBundleHelper FromData(byte[] data, string path)
+    private static AssetBundleHelper FromData(byte[] data, string path)
     {
         MemoryStream bundleMemoryStream = new(data);
 
@@ -75,13 +112,21 @@ internal sealed class AssetBundleHelper : IDisposable
         return new AssetBundleHelper(manager, bundleFileInstance);
     }
 
-    public IList<AssetTypeValueField> GetAllBaseFields(int fileIndex = 0)
+    public IEnumerable<string> GetContainerNames(int fileIndex = 0)
     {
-        return this.FileInstances[fileIndex]
-            .file.AssetInfos.Select(x =>
-                this.manager.GetBaseField(this.FileInstances[fileIndex], x)
-            )
-            .ToList();
+        AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
+
+        var assetBundleInfo = this.manager.GetBaseField(
+            assetsFileInstance,
+            assetsFileInstance.file.GetAssetInfo(pathId: 1)
+        );
+
+        var container = assetBundleInfo["m_Container.Array"];
+        foreach (var containerChild in container.Children)
+        {
+            string name = containerChild[0].AsString;
+            yield return name;
+        }
     }
 
     public AssetTypeValueField GetBaseField(string assetName, int fileIndex = 0)
@@ -121,17 +166,6 @@ internal sealed class AssetBundleHelper : IDisposable
         newUncompressedBundle.Read(reader);
         using AssetsFileWriter writer = new(stream);
         newUncompressedBundle.Pack(writer, AssetBundleCompressionType.LZ4);
-    }
-
-    public void WriteEncrypted(Stream stream)
-    {
-        MemoryStream ms = new();
-        this.Write(ms);
-
-        byte[] decrypted = ms.ToArray();
-        byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
-
-        stream.Write(encrypted);
     }
 
     private AssetFileInfo GetFileInfo(string assetName, int fileIndex)
