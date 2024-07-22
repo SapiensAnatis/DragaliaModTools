@@ -45,7 +45,7 @@ internal static class RijndaelHelper
         return outputBuffer;
     }
 
-    public static PaddedBufferedBlockCipher CreateCipher(bool forEncryption)
+    private static PaddedBufferedBlockCipher CreateCipher(bool forEncryption)
     {
         RijndaelEngine engine = new(256);
         CbcBlockCipher blockCiper = new(engine);
