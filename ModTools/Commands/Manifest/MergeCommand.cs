@@ -16,6 +16,7 @@ internal sealed class MergeCommand
     /// <param name="outputBundleDir">--output-bundles|-b, The path to a directory to output the new bundles to.</param>
     /// <param name="assetDirectories">--assets-path|-a, Comma-separated list of directories to source the added asset bundles from.</param>
     /// <param name="conversion">--convert|-c, Whether to convert assets to iOS during the merge process.</param>
+    /// <param name="readFromDisk">Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.</param>
     [Command("merge")]
     public void Command(
         string targetPath,
@@ -23,9 +24,12 @@ internal sealed class MergeCommand
         string outputManifestDir,
         string outputBundleDir,
         string[] assetDirectories,
-        bool conversion
+        bool conversion,
+        bool readFromDisk
     )
     {
+        SharedOptionContext.ReadFromDisk = readFromDisk;
+
         using AssetBundleHelper targetHelper = AssetBundleHelper.FromPathEncrypted(targetPath);
         using AssetBundleHelper sourceHelper = AssetBundleHelper.FromPathEncrypted(sourcePath);
 
@@ -53,6 +57,10 @@ internal sealed class MergeCommand
             // TODO multiple paths support again
             FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
 
+            using AssetBundleHelper openedBundle = AssetBundleHelper.FromPath(
+                bundleToAddPath.FullName
+            );
+
             if (asset["assets"].IsDummy)
             {
                 var newArray = ValueBuilder.DefaultValueFieldFromTemplate(
@@ -60,12 +68,12 @@ internal sealed class MergeCommand
                 );
                 asset.Children.Add(newArray);
 
-                PopulateAssetArray(newArray, bundleToAddPath);
+                PopulateAssetArray(newArray, openedBundle);
             }
 
             if (conversion)
             {
-                (FileInfo converted, string newHash) = PerformConversion(bundleToAddPath, asset);
+                (FileInfo converted, string newHash) = PerformConversion(openedBundle, asset);
                 string newAssetPath = GetAssetPath(newHash);
                 CopyToOutput(converted, outputBundleDirInfo, newAssetPath);
             }
@@ -128,14 +136,14 @@ internal sealed class MergeCommand
     }
 
     private static (FileInfo convertedPath, string newHash) PerformConversion(
-        FileInfo sourcePath,
+        AssetBundleHelper bundle,
         AssetTypeValueField asset
     )
     {
         string tempFileName = Path.GetTempFileName();
         FileInfo outputFileInfo = new(tempFileName);
 
-        BundleConversionHelper.ConvertToIos(sourcePath, outputFileInfo);
+        BundleConversionHelper.ConvertToIos(bundle, outputFileInfo);
         string newHash = HashHelper.GetHash(outputFileInfo);
         asset["hash"].AsString = newHash;
 
@@ -172,43 +180,27 @@ internal sealed class MergeCommand
         throw new IOException($"Failed to find asset {assetPath} in any configured directory");
     }
 
-    private static void PopulateAssetArray(AssetTypeValueField newAssetVector, FileInfo bundlePath)
+    private static void PopulateAssetArray(
+        AssetTypeValueField newAssetVector,
+        AssetBundleHelper helper
+    )
     {
         var newArray = newAssetVector["Array"];
-        byte[] bundleData = File.ReadAllBytes(bundlePath.FullName);
 
-        using AssetBundleHelper helper = AssetBundleHelper.FromData(
-            bundleData,
-            bundlePath.FullName
-        );
-
-        var containers = helper
-            .GetAllBaseFields(0)
-            .Select(GetContainer)
-            .Where(x => x != null)
-            .Select(x =>
+        var newElements = helper
+            .GetContainerNames()
+            .Select(containerName =>
             {
+                string arrayValue = containerName
+                    .Replace("assets/_gluonresources/", "", StringComparison.Ordinal)
+                    .Replace("resources/", "", StringComparison.Ordinal);
+
                 var newValue = ValueBuilder.DefaultValueFieldFromArrayTemplate(newArray);
-                newValue.Value.AsString = x;
+                newValue.Value.AsString = arrayValue;
                 return newValue;
             });
 
-        newArray.Children.AddRange(containers);
-    }
-
-    private static string? GetContainer(AssetTypeValueField assetField)
-    {
-        if (assetField["m_Container"] is not { IsDummy: false } container)
-            return null;
-
-        string containerName = container[0][0][0].AsString;
-        containerName = containerName.Replace(
-            "assets/_gluonresources/",
-            "",
-            StringComparison.Ordinal
-        );
-        containerName = containerName.Replace("resources/", "", StringComparison.Ordinal);
-        return containerName;
+        newArray.Children.AddRange(newElements);
     }
 }
 

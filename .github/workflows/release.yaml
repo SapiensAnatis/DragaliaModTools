@@ -90,4 +90,5 @@ jobs:
         with:
           files: ./artifacts/**/*
           tag_name: ${{ needs.tag.outputs.new_tag }}
+          prerelease: ${{ inputs.prerelease }}
 

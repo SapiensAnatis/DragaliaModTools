@@ -19,8 +19,7 @@ internal sealed class CheckTargetCommand
 
         foreach (FileInfo path in filePaths)
         {
-            byte[] data = File.ReadAllBytes(path.FullName);
-            using AssetBundleHelper helper = AssetBundleHelper.FromData(data, path.FullName);
+            using AssetBundleHelper helper = AssetBundleHelper.FromPath(path.FullName);
 
             foreach (AssetsFileInstance fileInstance in helper.FileInstances)
             {
