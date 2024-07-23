@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Text.Json;
+using System.Runtime.CompilerServices;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using ModTools.Shared;
@@ -14,6 +15,7 @@ internal sealed class MergeCommand
     /// <param name="sourcePath">--source|-s, The path to the manifest that is the source of the merge.</param>
     /// <param name="outputManifestDir">--output-manifests|-m, The path to a directory to output the merged manifest to.</param>
     /// <param name="outputBundleDir">--output-bundles|-b, The path to a directory to output the new bundles to.</param>
+    /// <param name="omitList">--omissions| Path to a JSON file containing a list of asset names to avoid merging into the new manifest.</param>
     /// <param name="assetDirectories">--assets-path|-a, Comma-separated list of directories to source the added asset bundles from.</param>
     /// <param name="conversion">--convert|-c, Whether to convert assets to iOS during the merge process.</param>
     /// <param name="readFromDisk">Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.</param>
@@ -23,6 +25,7 @@ internal sealed class MergeCommand
         string sourcePath,
         string outputManifestDir,
         string outputBundleDir,
+        string omitList,
         string[] assetDirectories,
         bool conversion,
         bool readFromDisk
@@ -37,10 +40,12 @@ internal sealed class MergeCommand
 
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
         AssetTypeValueField sourceBaseField = sourceHelper.GetBaseField("manifest");
-
+        string[] omissionList = omitList != null ? JsonSerializer.Deserialize<string[]>(File.ReadAllText(omitList)) : new string[0];
+        
         List<AssetTypeValueField> othersToAdd = GetDiff(
             targetBaseField,
             sourceBaseField,
+            omissionList,
             (manifest) => manifest["categories"]["Array"][1]["assets"]["Array"]
         );
 
@@ -88,6 +93,7 @@ internal sealed class MergeCommand
         List<AssetTypeValueField> rawsToAdd = GetDiff(
             targetBaseField,
             sourceBaseField,
+            omissionList,
             (manifest) => manifest["rawAssets"]["Array"]
         );
 
@@ -115,6 +121,7 @@ internal sealed class MergeCommand
     private static List<AssetTypeValueField> GetDiff(
         AssetTypeValueField target,
         AssetTypeValueField source,
+        string[] omissions,
         Func<AssetTypeValueField, AssetTypeValueField> path,
         [CallerArgumentExpression(nameof(path))] string? pathName = null
     )
@@ -124,6 +131,7 @@ internal sealed class MergeCommand
 
         List<AssetTypeValueField> assetsToAdd = sourceAssets
             .Except(targetAssets, ManifestAssetComparer.Instance)
+            .ExceptBy(omissions, o => o["name"].AsString)
             .ToList();
 
         ConsoleApp.Log($"Found {assetsToAdd.Count} assets to add to {pathName}");
