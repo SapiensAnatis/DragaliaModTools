@@ -57,9 +57,11 @@ internal sealed class MergeCommand
             // TODO multiple paths support again
             FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
 
+#pragma warning disable CA2000 // Dispose objects before losing scope: Appears to be a false positive; there is a using declaration
             using AssetBundleHelper openedBundle = AssetBundleHelper.FromPath(
                 bundleToAddPath.FullName
             );
+#pragma warning restore CA2000
 
             if (asset["assets"].IsDummy)
             {

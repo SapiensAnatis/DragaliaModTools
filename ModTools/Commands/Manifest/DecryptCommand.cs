@@ -9,7 +9,7 @@ internal sealed class DecryptCommand
     /// </summary>
     /// <param name="path">The path to the manifest to decrypt.</param>
     [Command("decrypt")]
-    public void Command(string path)
+    public void Command([Argument] string path)
     {
         using AssetBundleHelper manifest = AssetBundleHelper.FromPathEncrypted(path);
 
