@@ -20,5 +20,6 @@ app.Add<DecryptCommand>("manifest");
 app.Add<EditCommand>("manifest");
 app.Add<MergeCommand>("manifest");
 app.Add<VerifyCommand>("manifest");
+app.Add<ImportExportCommand>("manifest");
 
 await app.RunAsync(args).ConfigureAwait(false);
