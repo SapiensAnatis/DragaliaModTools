@@ -21,5 +21,6 @@ app.Add<EditCommand>("manifest");
 app.Add<MergeCommand>("manifest");
 app.Add<VerifyCommand>("manifest");
 app.Add<ImportExportCommand>("manifest");
+app.Add<AddBundleCommand>("manifest");
 
 await app.RunAsync(args).ConfigureAwait(false);
