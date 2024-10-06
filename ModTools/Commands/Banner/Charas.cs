@@ -1,6 +1,6 @@
 namespace ModTools.Commands.Banner;
 
-public enum Charas
+internal enum Charas
 {
     Empty = 0,
     Marty = 10130102,

@@ -33,7 +33,13 @@ internal sealed class AddBundleCommand
             );
         }
 
-        foreach (var bundleFilePath in Directory.EnumerateFiles(bundleDirectory))
+        foreach (
+            var bundleFilePath in Directory.EnumerateFiles(
+                bundleDirectory,
+                "*",
+                SearchOption.AllDirectories
+            )
+        )
         {
             AssetTypeValueField newEntry = BuildNewOthersArrayEntry(othersArray, bundleFilePath);
             othersArray.Children.Add(newEntry);

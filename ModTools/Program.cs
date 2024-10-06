@@ -15,6 +15,7 @@ app.Add<GetHashCommand>();
 app.Add<ImportDictionaryCommand>();
 app.Add<ImportMultipleDictionaryCommand>();
 app.Add<BannerCommand>();
+app.Add<UpdateNamesCommand>();
 
 app.Add<DecryptCommand>("manifest");
 app.Add<EditCommand>("manifest");
