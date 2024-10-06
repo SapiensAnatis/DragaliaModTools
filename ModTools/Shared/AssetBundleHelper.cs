@@ -12,6 +12,9 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public IList<AssetsFileInstance> FileInstances => fileInstances;
 
+    public IList<AssetBundleDirectoryInfo> DirectoryInfos =>
+        bundleInstance.file.BlockAndDirInfo.DirectoryInfos;
+
     public string Path => this.bundleInstance.path;
 
     private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
