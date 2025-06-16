@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
@@ -199,7 +199,7 @@ internal sealed class MergeCommand
         File.Copy(sourcePath.FullName, newPath, overwrite: true);
     }
 
-    private static FileInfo GetSourceFile(string assetPath, IEnumerable<string> directories)
+    private static FileInfo GetSourceFile(string assetPath, IEnumerable<string> directories, HttpClient _httpClient)
     {
         foreach (string directory in directories)
         {
@@ -210,20 +210,23 @@ internal sealed class MergeCommand
             }
         }
 
-        ConsoleApp.Log($"{assetPath} not found in any specified directory. Attempting download.");
+        //ConsoleApp.Log($"{assetPath} not found in any specified directory. Attempting download.");
         Directory.CreateDirectory($"./Repository/{assetPath[..2]}/");
         
-        using HttpRequestMessage request = new();
-		request.Method = HttpMethod.Get;
-		request.RequestUri = new($"https://cdn.minty.sbs/dl/assetbundles/universe/{assetPath[..2]}/{assetPath[3..]}");
+        try {
+            using HttpRequestMessage request = new();
+            request.Method = HttpMethod.Get;
+            request.RequestUri = new($"https://cdn.minty.sbs/dl/assetbundles/universe/{assetPath[..2]}/{assetPath[3..]}");
 
-		using HttpResponseMessage response = _httpClient.Send(request);
-		response.EnsureSuccessStatusCode();
+            using HttpResponseMessage response = _httpClient.Send(request);
+            response.EnsureSuccessStatusCode();
 
-		using FileStream saveFs = File.OpenWrite($"./Repository/{assetPath}");
-		response.Content.CopyTo(saveFs, null, CancellationToken.None);
-
-        throw new IOException($"Failed to find or download asset {assetPath}.");
+            using FileStream saveFs = File.OpenWrite($"./Repository/{assetPath}");
+            response.Content.CopyTo(saveFs, null, CancellationToken.None);
+            
+            return new FileInfo($"./Repository/{assetPath[..2]}/{assetPath[3..]}");
+        }
+        catch { throw new IOException($"Failed to find or download asset {assetPath}."); }
     }
 
     private static void PopulateAssetArray(
