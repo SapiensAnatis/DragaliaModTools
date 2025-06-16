@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
@@ -65,16 +65,20 @@ internal sealed class MergeCommand
 
         var normalAsset = assets.First();
 
+        HttpClient _httpClient = new HttpClient();
+        
         foreach (AssetTypeValueField asset in othersToAdd)
         {
             string hash = asset["hash"].AsString;
             string assetPath = GetAssetPath(hash);
             // TODO multiple paths support again
-            FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories);
+            FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories, _httpClient);
 
+#pragma warning disable CA2000 // Dispose objects before losing scope: Appears to be a false positive; there is a using declaration
             using AssetBundleHelper openedBundle = AssetBundleHelper.FromPath(
                 bundleToAddPath.FullName
             );
+#pragma warning restore CA2000
 
             if (asset["assets"].IsDummy)
             {
@@ -195,7 +199,7 @@ internal sealed class MergeCommand
         File.Copy(sourcePath.FullName, newPath, overwrite: true);
     }
 
-    private static FileInfo GetSourceFile(string assetPath, IEnumerable<string> directories)
+    private static FileInfo GetSourceFile(string assetPath, IEnumerable<string> directories, HttpClient _httpClient)
     {
         foreach (string directory in directories)
         {
@@ -206,7 +210,23 @@ internal sealed class MergeCommand
             }
         }
 
-        throw new IOException($"Failed to find asset {assetPath} in any configured directory");
+        //ConsoleApp.Log($"{assetPath} not found in any specified directory. Attempting download.");
+        Directory.CreateDirectory($"./Repository/{assetPath[..2]}/");
+        
+		try {
+			using HttpRequestMessage request = new();
+			request.Method = HttpMethod.Get;
+			request.RequestUri = new($"https://cdn.minty.sbs/dl/assetbundles/universe/{assetPath[..2]}/{assetPath[3..]}");
+
+			using HttpResponseMessage response = _httpClient.Send(request);
+			response.EnsureSuccessStatusCode();
+
+			using FileStream saveFs = File.OpenWrite($"./Repository/{assetPath}");
+			response.Content.CopyTo(saveFs, null, CancellationToken.None);
+			
+			return new FileInfo($"./Repository/{assetPath[..2]}/{assetPath[3..]}");
+		}
+		catch { throw new IOException($"Failed to find or download asset {assetPath}."); }
     }
 
     private static void PopulateAssetArray(
@@ -242,13 +262,14 @@ file sealed class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
         ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(y);
 
+#pragma warning disable CA1065 // Exceptions should not be raised in this type of method. Internal comparer & helps to identify logic flaws over returning false
         AssetTypeValueField xName = x["name"];
         if (xName.IsDummy)
             throw new ArgumentException("Not a manifest asset", nameof(x));
-
         AssetTypeValueField yName = y["name"];
         if (yName.IsDummy)
             throw new ArgumentException("Not a manifest asset", nameof(y));
+#pragma warning restore CA1065
 
         return xName.AsString == yName.AsString;
     }
