@@ -1,6 +1,6 @@
 namespace ModTools.Commands.Banner;
 
-public enum Dragons
+internal enum Dragons
 {
     Empty = 0,
     Homura = 20030101,

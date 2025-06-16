@@ -15,10 +15,13 @@ app.Add<GetHashCommand>();
 app.Add<ImportDictionaryCommand>();
 app.Add<ImportMultipleDictionaryCommand>();
 app.Add<BannerCommand>();
+app.Add<UpdateNamesCommand>();
 
 app.Add<DecryptCommand>("manifest");
 app.Add<EditCommand>("manifest");
 app.Add<MergeCommand>("manifest");
 app.Add<VerifyCommand>("manifest");
+app.Add<ImportExportCommand>("manifest");
+app.Add<AddBundleCommand>("manifest");
 
 await app.RunAsync(args).ConfigureAwait(false);

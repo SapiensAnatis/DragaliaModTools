@@ -12,6 +12,9 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public IList<AssetsFileInstance> FileInstances => fileInstances;
 
+    public IList<AssetBundleDirectoryInfo> DirectoryInfos =>
+        bundleInstance.file.BlockAndDirInfo.DirectoryInfos;
+
     public string Path => this.bundleInstance.path;
 
     private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
@@ -27,7 +30,9 @@ internal sealed class AssetBundleHelper : IDisposable
         {
             if (name.EndsWith(".resS", StringComparison.InvariantCultureIgnoreCase))
             {
-                ConsoleApp.Log($"Skipping streamed assets file instance {name} at index {idx}");
+                ConsoleApp.Log(
+                    $"Skipping load of streamed assets file instance {name} at index {idx}"
+                );
                 continue;
             }
 
@@ -134,6 +139,18 @@ internal sealed class AssetBundleHelper : IDisposable
         AssetFileInfo fileInfo = this.GetFileInfo(assetName, fileIndex);
 
         return this.GetBaseField(fileInfo);
+    }
+
+    public AssetTypeValueField GetBaseField(int pathId, int fileIndex = 0)
+    {
+        AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
+
+        var assetBundleInfo = this.manager.GetBaseField(
+            assetsFileInstance,
+            assetsFileInstance.file.GetAssetInfo(pathId)
+        );
+
+        return assetBundleInfo;
     }
 
     public AssetTypeValueField GetBaseField(AssetFileInfo fileInfo, int fileIndex = 0)

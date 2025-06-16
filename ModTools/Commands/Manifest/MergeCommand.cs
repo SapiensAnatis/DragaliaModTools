@@ -74,9 +74,11 @@ internal sealed class MergeCommand
             // TODO multiple paths support again
             FileInfo bundleToAddPath = GetSourceFile(assetPath, assetDirectories, _httpClient);
 
+#pragma warning disable CA2000 // Dispose objects before losing scope: Appears to be a false positive; there is a using declaration
             using AssetBundleHelper openedBundle = AssetBundleHelper.FromPath(
                 bundleToAddPath.FullName
             );
+#pragma warning restore CA2000
 
             if (asset["assets"].IsDummy)
             {
@@ -257,13 +259,14 @@ file sealed class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
         ArgumentNullException.ThrowIfNull(x);
         ArgumentNullException.ThrowIfNull(y);
 
+#pragma warning disable CA1065 // Exceptions should not be raised in this type of method. Internal comparer & helps to identify logic flaws over returning false
         AssetTypeValueField xName = x["name"];
         if (xName.IsDummy)
             throw new ArgumentException("Not a manifest asset", nameof(x));
-
         AssetTypeValueField yName = y["name"];
         if (yName.IsDummy)
             throw new ArgumentException("Not a manifest asset", nameof(y));
+#pragma warning restore CA1065
 
         return xName.AsString == yName.AsString;
     }

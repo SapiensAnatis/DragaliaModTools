@@ -19,6 +19,8 @@ Commands:
   import-multiple         Import a directory of serializable dictionary files into an asset bundle.
   manifest decrypt        Decrypt a manifest.
   manifest edit-master    Update the master asset's hash and size in a manifest.
+  manifest export         Export the manifest into an editable JSON format.
+  manifest import         Import a previously exported JSON file over an encrypted manifest asset bundle.
   manifest merge          Update the target manifest by adding any files only present in the source manifest.
   manifest verify         Verify the integrity of an encrypted manifest.
 ```
