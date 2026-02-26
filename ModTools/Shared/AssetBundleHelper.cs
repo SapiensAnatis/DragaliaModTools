@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Text;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
@@ -63,19 +64,43 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public static AssetBundleHelper FromPath(string path)
     {
-        if (SharedOptionContext.ReadFromDisk)
+        try
         {
-            // Read from disk instead
-            AssetsManager manager = new();
+            if (SharedOptionContext.ReadFromDisk)
+            {
+                // Read from disk instead
+                AssetsManager manager = new();
 
 #pragma warning disable CA2000 // CA2000: Dispose objects before losing scope. Ownership of the stream is transferred to the AssetBundleHelper, which will dispose of it in its own Dispose method.
-            BundleFileInstance bundleFileInstance = new(File.OpenRead(path), unpackIfPacked: true);
+                BundleFileInstance bundleFileInstance =
+                    new(File.OpenRead(path), unpackIfPacked: true);
 #pragma warning restore CA2000
 
-            return new AssetBundleHelper(manager, bundleFileInstance);
-        }
+                return new AssetBundleHelper(manager, bundleFileInstance);
+            }
 
-        return FromData(File.ReadAllBytes(path), path);
+            return FromData(File.ReadAllBytes(path), path);
+        }
+        catch (Exception ex)
+        {
+            ConsoleApp.LogError($"[WARNING] Failed to open file at {path}");
+
+            using var reader = new StreamReader(path, Encoding.UTF8);
+            if (
+                reader.ReadLine() is {} line
+                && line.StartsWith(
+                    "version https://git-lfs.github.com/spec/",
+                    StringComparison.InvariantCulture
+                )
+            )
+            {
+                ConsoleApp.LogError(
+                    "[WARNING] It looks like this file is a Git LFS pointer. Did you do git lfs pull?"
+                );
+            }
+
+            throw;
+        }
     }
 
     public static AssetBundleHelper FromPathEncrypted(string path)
