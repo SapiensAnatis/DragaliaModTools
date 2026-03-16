@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Folder Name="/Solution Items/Workflows/">
+    <File Path=".github/workflows/release.yaml" />
+  </Folder>
+  <Project Path="ModTools/ModTools.csproj" />
+  <Project Path="SerializedDictionaryPlugin.Shared/SerializableDictionaryPlugin.Shared.csproj" />
+</Solution>
