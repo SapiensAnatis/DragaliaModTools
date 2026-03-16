@@ -1,6 +1,6 @@
 using AssetsTools.NET;
 using ModTools.Shared;
-using SerializableDictionaryPlugin.Shared;
+using ModTools.Shared.SerializableDictionary;
 
 namespace ModTools.Commands;
 

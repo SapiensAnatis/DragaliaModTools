@@ -3,9 +3,9 @@ using System.Reflection;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
-namespace SerializableDictionaryPlugin.Shared;
+namespace ModTools.Shared.SerializableDictionary;
 
-public static partial class SerializableDictionaryHelper
+internal static partial class SerializableDictionaryHelper
 {
     public static Dictionary<TKey, TObject> LoadAsDictionary<
         TKey,

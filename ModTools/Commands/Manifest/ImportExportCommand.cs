@@ -1,8 +1,5 @@
-using System.Text.Json;
 using AssetsTools.NET;
-using AssetsTools.NET.Extra;
 using ModTools.Shared;
-using SerializableDictionaryPlugin.Shared;
 
 namespace ModTools.Commands.Manifest;
 

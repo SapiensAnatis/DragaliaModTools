@@ -6,5 +6,4 @@
     <File Path=".github/workflows/release.yaml" />
   </Folder>
   <Project Path="ModTools/ModTools.csproj" />
-  <Project Path="SerializedDictionaryPlugin.Shared/SerializableDictionaryPlugin.Shared.csproj" />
 </Solution>

@@ -10,6 +10,7 @@
     <PublishAot>true</PublishAot>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <AnalysisLevel>latest-all</AnalysisLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,10 +25,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Otp.NET" Version="1.4.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\SerializedDictionaryPlugin.Shared\SerializableDictionaryPlugin.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

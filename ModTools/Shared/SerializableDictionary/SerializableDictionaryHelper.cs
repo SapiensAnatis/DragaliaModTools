@@ -1,12 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
-namespace SerializableDictionaryPlugin.Shared;
+namespace ModTools.Shared.SerializableDictionary;
 
-public static partial class SerializableDictionaryHelper
+internal static partial class SerializableDictionaryHelper
 {
     public static void UpdateFromFile(AssetTypeValueField baseField, string filepath)
     {
@@ -19,7 +17,7 @@ public static partial class SerializableDictionaryHelper
             JsonSerializer.Deserialize(
                 fs,
                 typeof(Dictionary<string, JsonElement>),
-                SharedSerializerContext.Default
+                SerializableDictionaryContext.Default
             )
             is not Dictionary<string, JsonElement> source
         )
@@ -41,7 +39,7 @@ public static partial class SerializableDictionaryHelper
             fs,
             newDict,
             typeof(Dictionary<object, JsonElement>),
-            SharedSerializerContext.Default
+            SerializableDictionaryContext.Default
         );
     }
 
@@ -84,7 +82,7 @@ public static partial class SerializableDictionaryHelper
                 JsonSerializer.SerializeToElement(
                     x.Children.ToDictionary(c => c.FieldName, GetPrimitiveFieldValue),
                     typeof(Dictionary<string, object>),
-                    SharedSerializerContext.Default
+                    SerializableDictionaryContext.Default
                 )
             );
 

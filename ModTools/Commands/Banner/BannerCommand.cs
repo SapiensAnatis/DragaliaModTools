@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AssetsTools.NET;
 using ModTools.Shared;
-using static SerializableDictionaryPlugin.Shared.SerializableDictionaryHelper;
+using static ModTools.Shared.SerializableDictionary.SerializableDictionaryHelper;
 
 namespace ModTools.Commands.Banner;
 

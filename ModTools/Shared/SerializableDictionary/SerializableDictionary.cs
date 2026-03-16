@@ -39,12 +39,11 @@
 
 using System.Collections;
 using System.Diagnostics;
-using System.Runtime.Intrinsics.Arm;
 
-namespace SerializableDictionaryPlugin.Shared;
+namespace ModTools.Shared.SerializableDictionary;
 
 [Serializable]
-public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
+internal class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 {
     // can't serialize internal generic struct.
     // extract to 4 arrays.
@@ -475,7 +474,7 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
         return new Enumerator(this, Enumerator.KeyValuePair);
     }
 
-    public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>, IDictionaryEnumerator
+    internal struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>, IDictionaryEnumerator
     {
         private SerializableDictionary<TKey, TValue> dictionary;
         private int version;
@@ -592,7 +591,7 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 
     [DebuggerTypeProxy(typeof(DictionaryKeyCollectionDebugView<,>))]
     [DebuggerDisplay("Count = {Count}")]
-    public sealed class KeyCollection : ICollection<TKey>, ICollection
+    internal sealed class KeyCollection : ICollection<TKey>, ICollection
     {
         private SerializableDictionary<TKey, TValue> dictionary;
 
@@ -720,7 +719,7 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
             get { return ((ICollection)dictionary).SyncRoot; }
         }
 
-        public struct Enumerator : IEnumerator<TKey>, IEnumerator
+        internal struct Enumerator : IEnumerator<TKey>, IEnumerator
         {
             private SerializableDictionary<TKey, TValue> dictionary;
             private int index;
@@ -787,7 +786,7 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 
     [DebuggerTypeProxy(typeof(DictionaryValueCollectionDebugView<,>))]
     [DebuggerDisplay("Count = {Count}")]
-    public sealed class ValueCollection : ICollection<TValue>, ICollection
+    internal sealed class ValueCollection : ICollection<TValue>, ICollection
     {
         private SerializableDictionary<TKey, TValue> dictionary;
 
@@ -915,7 +914,7 @@ public class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
             get { return ((ICollection)dictionary).SyncRoot; }
         }
 
-        public struct Enumerator : IEnumerator<TValue>, IEnumerator
+        internal struct Enumerator : IEnumerator<TValue>, IEnumerator
         {
             private SerializableDictionary<TKey, TValue> dictionary;
             private int index;

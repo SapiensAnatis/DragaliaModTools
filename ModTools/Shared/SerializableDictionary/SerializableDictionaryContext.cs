@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SerializableDictionaryPlugin.Shared;
+namespace ModTools.Shared.SerializableDictionary;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(Dictionary<object, object>))]
@@ -10,4 +10,4 @@ namespace SerializableDictionaryPlugin.Shared;
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(JsonElement))]
-internal sealed partial class SharedSerializerContext : JsonSerializerContext { }
+internal sealed partial class SerializableDictionaryContext : JsonSerializerContext { }

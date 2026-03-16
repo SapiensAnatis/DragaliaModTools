@@ -1,4 +1,4 @@
-﻿namespace SerializableDictionaryPlugin.Shared;
+﻿namespace ModTools.Shared.SerializableDictionary;
 
 internal sealed class DeterministicStringEqualityComparer : EqualityComparer<string>
 {
