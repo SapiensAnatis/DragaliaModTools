@@ -8,13 +8,21 @@ internal static class HashHelper
 
     public static string GetHash(FileInfo assetBundle)
     {
+        using FileStream fileStream = File.OpenRead(assetBundle.FullName);
+        return GetHash(fileStream);
+    }
+
+    public static string GetHash(AssetBundleHelper assetBundle)
+    {
+        return GetHash(assetBundle.DataStream);
+    }
+
+    private static string GetHash(Stream assetBundleStream)
+    {
         Span<byte> hash = stackalloc byte[32];
         Span<char> dest = stackalloc char[52];
 
-        using (FileStream file = File.OpenRead(assetBundle.FullName))
-        {
-            SHA256.HashData(file, hash);
-        }
+        SHA256.HashData(assetBundleStream, hash);
 
         Base32Encode(hash, dest);
 

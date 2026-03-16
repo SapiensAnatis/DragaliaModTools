@@ -18,6 +18,8 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public string Path => this.bundleInstance.path;
 
+    public Stream DataStream => this.bundleInstance.DataStream;
+
     private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
         this.manager = manager;
@@ -72,8 +74,10 @@ internal sealed class AssetBundleHelper : IDisposable
                 AssetsManager manager = new();
 
 #pragma warning disable CA2000 // CA2000: Dispose objects before losing scope. Ownership of the stream is transferred to the AssetBundleHelper, which will dispose of it in its own Dispose method.
-                BundleFileInstance bundleFileInstance =
-                    new(File.OpenRead(path), unpackIfPacked: true);
+                BundleFileInstance bundleFileInstance = new(
+                    File.OpenRead(path),
+                    unpackIfPacked: true
+                );
 #pragma warning restore CA2000
 
                 return new AssetBundleHelper(manager, bundleFileInstance);
@@ -87,7 +91,7 @@ internal sealed class AssetBundleHelper : IDisposable
 
             using var reader = new StreamReader(path, Encoding.UTF8);
             if (
-                reader.ReadLine() is {} line
+                reader.ReadLine() is { } line
                 && line.StartsWith(
                     "version https://git-lfs.github.com/spec/",
                     StringComparison.InvariantCulture
