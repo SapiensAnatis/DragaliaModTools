@@ -4,9 +4,43 @@ namespace ModTools.Shared;
 
 internal static class HashHelper
 {
+    private static ReadOnlySpan<char> Base32Alphabet => "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
     public static string GetHash(FileInfo assetBundle)
     {
-        byte[] hash = SHA256.HashData(File.ReadAllBytes(assetBundle.FullName));
-        return OtpNet.Base32Encoding.ToString(hash)[..52];
+        Span<byte> hash = stackalloc byte[32];
+        Span<char> dest = stackalloc char[52];
+
+        using (FileStream file = File.OpenRead(assetBundle.FullName))
+        {
+            SHA256.HashData(file, hash);
+        }
+
+        Base32Encode(hash, dest);
+
+        return new string(dest);
+    }
+
+    private static void Base32Encode(ReadOnlySpan<byte> input, Span<char> output)
+    {
+        int bitIndex = 0;
+        for (int i = 0; i < 52; i++)
+        {
+            int byteOffset = bitIndex / 8;
+            int bitOffset = bitIndex % 8;
+
+            int num = input[byteOffset] << 8;
+            if (byteOffset + 1 < input.Length)
+            {
+                num |= input[byteOffset + 1];
+            }
+
+            int chunk = (num >> (16 - 5 - bitOffset)) & 0b11111;
+            output[i] = Base32Alphabet[chunk];
+            bitIndex += 5;
+        }
+
+        // We don't need to worry about padding since the game explicitly truncates all
+        // hashes to 52 characters instead of the 56 with padding
     }
 }

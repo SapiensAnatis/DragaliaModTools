@@ -81,7 +81,7 @@ internal sealed class AssetBundleHelper : IDisposable
 
             return FromData(File.ReadAllBytes(path), path);
         }
-        catch (Exception ex)
+        catch
         {
             ConsoleApp.LogError($"[WARNING] Failed to open file at {path}");
 
