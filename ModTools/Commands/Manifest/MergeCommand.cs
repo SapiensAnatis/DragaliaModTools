@@ -262,35 +262,3 @@ internal sealed class MergeCommand
         newArray.Children.AddRange(newElements);
     }
 }
-
-file sealed class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
-{
-    public static ManifestAssetComparer Instance { get; } = new();
-
-    public bool Equals(AssetTypeValueField? x, AssetTypeValueField? y)
-    {
-        ArgumentNullException.ThrowIfNull(x);
-        ArgumentNullException.ThrowIfNull(y);
-
-#pragma warning disable CA1065 // Exceptions should not be raised in this type of method. Internal comparer & helps to identify logic flaws over returning false
-        AssetTypeValueField xName = x["name"];
-        if (xName.IsDummy)
-            throw new ArgumentException("Not a manifest asset", nameof(x));
-        AssetTypeValueField yName = y["name"];
-        if (yName.IsDummy)
-            throw new ArgumentException("Not a manifest asset", nameof(y));
-#pragma warning restore CA1065
-
-        return xName.AsString == yName.AsString;
-    }
-
-    public int GetHashCode(AssetTypeValueField obj)
-    {
-        AssetTypeValueField name = obj["name"];
-
-        if (name.IsDummy)
-            throw new ArgumentException("Not a manifest asset", nameof(obj));
-
-        return name.AsString.GetHashCode(StringComparison.Ordinal);
-    }
-}
