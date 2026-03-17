@@ -18,7 +18,6 @@ internal sealed class MergeCommand
     /// <param name="omissionsPath">--omissions| Path to a JSON file containing a list of asset names to avoid merging into the new manifest.</param>
     /// <param name="assetDirectories">--assets-path|-a, Comma-separated list of directories to source the added asset bundles from.</param>
     /// <param name="conversion">--convert|-c, Whether to convert assets to iOS during the merge process.</param>
-    /// <param name="readFromDisk">Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.</param>
     [Command("merge")]
     public void Command(
         string targetPath,
@@ -27,12 +26,9 @@ internal sealed class MergeCommand
         string outputBundleDir,
         string? omissionsPath,
         string[] assetDirectories,
-        bool conversion,
-        bool readFromDisk
+        bool conversion
     )
     {
-        SharedOptionContext.ReadFromDisk = readFromDisk;
-
         using AssetBundleHelper targetHelper = AssetBundleHelper.FromPathEncrypted(targetPath);
         using AssetBundleHelper sourceHelper = AssetBundleHelper.FromPathEncrypted(sourcePath);
 

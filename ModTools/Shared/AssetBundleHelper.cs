@@ -68,7 +68,7 @@ internal sealed class AssetBundleHelper : IDisposable
     {
         try
         {
-            if (SharedOptionContext.ReadFromDisk)
+            if (GlobalOptions.Instance.ReadFromDisk)
             {
                 // Read from disk instead
                 AssetsManager manager = new();
