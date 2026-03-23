@@ -11,13 +11,17 @@ ConsoleApp.JsonSerializerOptions = ModToolsSerializerContext.Default.Options;
 app.UseFilter<ExceptionHandlerFilter>();
 app.UseFilter<GlobalOptions.SetGlobalOptionsFilter>();
 
-app.ConfigureGlobalOptions((ref builder) =>
-{
-    bool readFromDisk = builder.AddGlobalOption("--read-from-disk",
-        "Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.",
-        false);
-    return new GlobalOptions(readFromDisk);
-});
+app.ConfigureGlobalOptions(
+    (ref builder) =>
+    {
+        bool readFromDisk = builder.AddGlobalOption(
+            "--read-from-disk",
+            "Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.",
+            false
+        );
+        return new GlobalOptions(readFromDisk);
+    }
+);
 
 app.Add<CheckTargetCommand>();
 app.Add<ConvertBundleCommand>();
@@ -33,5 +37,6 @@ app.Add<MergeCommand>("manifest");
 app.Add<VerifyCommand>("manifest");
 app.Add<ImportExportCommand>("manifest");
 app.Add<AddBundleCommand>("manifest");
+app.Add<AddEventAssetsCommand>("manifest");
 
 await app.RunAsync(args).ConfigureAwait(false);

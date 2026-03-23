@@ -15,18 +15,18 @@ internal sealed class MergeCommand
     /// <param name="sourcePath">--source|-s, The path to the manifest that is the source of the merge.</param>
     /// <param name="outputManifestDir">--output-manifests|-m, The path to a directory to output the merged manifest to.</param>
     /// <param name="outputBundleDir">--output-bundles|-b, The path to a directory to output the new bundles to.</param>
-    /// <param name="omissionsPath">--omissions| Path to a JSON file containing a list of asset names to avoid merging into the new manifest.</param>
     /// <param name="assetDirectories">--assets-path|-a, Comma-separated list of directories to source the added asset bundles from.</param>
     /// <param name="conversion">--convert|-c, Whether to convert assets to iOS during the merge process.</param>
+    /// <param name="omissionsPath">--omissions| Path to a JSON file containing a list of asset names to avoid merging into the new manifest.</param>
     [Command("merge")]
     public void Command(
         string targetPath,
         string sourcePath,
         string outputManifestDir,
         string outputBundleDir,
-        string? omissionsPath,
         string[] assetDirectories,
-        bool conversion
+        bool conversion,
+        string? omissionsPath = null
     )
     {
         using AssetBundleHelper targetHelper = AssetBundleHelper.FromPathEncrypted(targetPath);
@@ -141,7 +141,7 @@ internal sealed class MergeCommand
 
         IEnumerable<AssetTypeValueField> assetsToAddEnumerable = sourceAssets.Except(
             targetAssets,
-            ManifestAssetComparer.Instance
+            AssetTypeValueFieldComparer.Instance
         );
 
         if (omittedAssetNames is not null)

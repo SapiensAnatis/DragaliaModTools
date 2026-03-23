@@ -13,6 +13,14 @@ internal static class BundleConversionHelper
 
     internal static void ConvertToIos(AssetBundleHelper bundleHelper, FileInfo output)
     {
+        ConvertToIos(bundleHelper);
+
+        using FileStream outputWrite = output.OpenWrite();
+        bundleHelper.Write(outputWrite);
+    }
+
+    internal static void ConvertToIos(AssetBundleHelper bundleHelper)
+    {
         foreach (AssetsFileInstance fileInstance in bundleHelper.FileInstances)
         {
             fileInstance.file.Metadata.TargetPlatform = (uint)TargetPlatform.Ios;
@@ -26,8 +34,5 @@ internal static class BundleConversionHelper
                 );
             }
         }
-
-        using FileStream outputWrite = output.OpenWrite();
-        bundleHelper.Write(outputWrite);
     }
 }

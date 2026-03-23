@@ -35,7 +35,7 @@
 #pragma warning disable CA1062
 #pragma warning disable CA1812
 #pragma warning disable CA1305
-
+#pragma warning disable CA1852
 
 using System.Collections;
 using System.Diagnostics;
@@ -1118,7 +1118,7 @@ internal class SerializableDictionary<TKey, TValue> : IDictionary<TKey, TValue>
             1424142949,
             1708971541,
             2050765853,
-            MaxPrimeArrayLength
+            MaxPrimeArrayLength,
         };
 
         public static int GetPrime(int min)

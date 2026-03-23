@@ -3,9 +3,9 @@ using AssetsTools.NET;
 
 namespace ModTools.Commands.Manifest;
 
-internal sealed class ManifestAssetComparer : IEqualityComparer<AssetTypeValueField>
+internal sealed class AssetTypeValueFieldComparer : IEqualityComparer<AssetTypeValueField>
 {
-    public static ManifestAssetComparer Instance { get; } = new();
+    public static AssetTypeValueFieldComparer Instance { get; } = new();
 
     public bool Equals(AssetTypeValueField? x, AssetTypeValueField? y)
     {
