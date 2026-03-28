@@ -3,7 +3,7 @@
 csharp_indent_labels = one_less_than_current
 csharp_using_directive_placement = outside_namespace:warning
 csharp_prefer_simple_using_statement = true:warning
-csharp_prefer_braces = when_multiline:warning
+csharp_prefer_braces = always:warning
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_prefer_method_group_conversion = true:warning
 csharp_style_prefer_top_level_statements = true:warning
