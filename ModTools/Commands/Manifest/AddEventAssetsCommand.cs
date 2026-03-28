@@ -41,47 +41,70 @@ internal sealed partial class AddEventAssetsCommand
 
         AssetTypeValueField targetBaseField = targetHelper.GetBaseField("manifest");
 
-        foreach (ManifestAsset asset in uniqueEventAssets.MainAssets)
+        foreach (ManifestAsset asset in uniqueEventAssets.MainAssets.Values)
         {
             string bundlePath = Path.Combine(assetsDir, GetAssetPath(asset.Hash));
 
-            Console.WriteLine($"Adding asset: ${asset.Name}");
+            ConsoleApp.LogVerbose($"Adding asset: {asset.Name}");
+
+            AssetBundleHelper? openedBundle = null;
 
             if (conversion)
             {
-                using var helper = AssetBundleHelper.FromPath(bundlePath);
+                openedBundle = AssetBundleHelper.FromPath(bundlePath);
+                BundleConversionHelper.ConvertToIos(openedBundle);
+            }
 
-                string oldHash = HashHelper.GetHash(helper);
-                BundleConversionHelper.ConvertToIos(helper);
-                string newHash = HashHelper.GetHash(helper);
-                Debug.Assert(oldHash != newHash);
+            // May implement further modifications to the asset in a pipeline...
+
+            if (openedBundle != null)
+            {
+                // Changes were made to the asset
+                // Need to write + compress to a temporary file to calculate the new hash, as the hash is of a
+                // compressed file. Could compress to a MemoryStream, hash, then write, but eh
+
+                string newHash;
+                string tempFilePath = Path.GetTempFileName();
+                await using (FileStream tempFs = File.OpenWrite(tempFilePath))
+                {
+                    openedBundle.Write(tempFs);
+                }
+
+                openedBundle.Dispose();
+
+                await using (FileStream tempReadFs = File.OpenRead(tempFilePath))
+                {
+                    newHash = HashHelper.GetHash(tempReadFs);
+                }
 
                 string outputPath = Path.Combine(outputBundleDir, GetAssetPath(newHash));
-                CreateDirectoryAndCopy(bundlePath, outputPath);
-
-                await using FileStream fs = File.OpenWrite(outputPath);
-
-                helper.Write(fs);
+                CreateOutputDirectory(outputPath);
+                File.Move(tempFilePath, outputPath, overwrite: true);
 
                 AddAssetToManifest(targetBaseField, asset with { Hash = newHash }, bundlePath);
             }
             else
             {
                 string outputPath = Path.Combine(outputBundleDir, GetAssetPath(asset.Hash));
-                CreateDirectoryAndCopy(bundlePath, outputPath);
+                CreateOutputDirectory(outputPath);
+                File.Copy(bundlePath, outputPath, overwrite: true);
 
                 AddAssetToManifest(targetBaseField, asset, bundlePath);
             }
         }
 
-        foreach (ManifestAsset asset in uniqueEventAssets.RawAssets)
+        foreach (ManifestAsset asset in uniqueEventAssets.RawAssets.Values)
         {
             string bundlePath = Path.Combine(assetsDir, GetAssetPath(asset.Hash));
             string outputPath = Path.Combine(outputBundleDir, GetAssetPath(asset.Hash));
-            CreateDirectoryAndCopy(bundlePath, outputPath);
 
-            AddRawAssetToManifest(targetBaseField, asset, bundlePath);
+            CreateOutputDirectory(outputPath);
+            File.Copy(bundlePath, outputPath, overwrite: true);
+
+            AddRawAssetToManifest(targetBaseField, asset);
         }
+
+        ValidateNoMissingDependenciesFinal(targetBaseField);
 
         targetHelper.UpdateBaseField("manifest", targetBaseField);
 
@@ -93,7 +116,7 @@ internal sealed partial class AddEventAssetsCommand
         byte[] decrypted = ms.ToArray();
         byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
 
-        ConsoleApp.Log($"Writing output to {resultOutputPath}");
+        ConsoleApp.Log($"[INFO] Writing output to {resultOutputPath}");
         await File.WriteAllBytesAsync(resultOutputPath, encrypted);
     }
 
@@ -126,8 +149,8 @@ internal sealed partial class AddEventAssetsCommand
         }
 
         return new(
-            new HashSet<ManifestAsset>(others, ManifestAssetNameComparer.Instance),
-            new HashSet<ManifestAsset>(raws, ManifestAssetNameComparer.Instance)
+            others.ToDictionary(x => x.Name, x => x),
+            raws.ToDictionary(x => x.Name, x => x)
         );
     }
 
@@ -155,7 +178,7 @@ internal sealed partial class AddEventAssetsCommand
             .MinBy(x => Math.Abs(x.Date.DayNumber - period.StartDate.DayNumber))
             .FolderName;
 
-        Console.WriteLine($"Event {eventId} ran between {preEventManifest} | {eventManifest}");
+        ConsoleApp.LogVerbose($"Event {eventId} ran between {preEventManifest} | {eventManifest}");
 
         var preEventAssets = await GetAssets(parsedManifestsDir, preEventManifest, locale);
         var eventAssets = await GetAssets(parsedManifestsDir, eventManifest, locale);
@@ -165,23 +188,38 @@ internal sealed partial class AddEventAssetsCommand
             locale
         ); // Assumes you are adding assets to the newest manifest
 
-        var uniqueEventAssets = new HashSet<ManifestAsset>(
+        Dictionary<string, ManifestAsset> resultMainAssets = [];
+        Dictionary<string, ManifestAsset> resultRawAssets = [];
+
+        foreach (var asset in eventAssets.MainAssets.Values)
+        {
+            if (
+                !preEventAssets.MainAssets.ContainsKey(asset.Name)
+                && !currentAssets.MainAssets.ContainsKey(asset.Name)
+            )
+            {
+                resultMainAssets.Add(asset.Name, asset);
+            }
+        }
+
+        foreach (var asset in eventAssets.RawAssets.Values)
+        {
+            if (
+                !preEventAssets.RawAssets.ContainsKey(asset.Name)
+                && !currentAssets.RawAssets.ContainsKey(asset.Name)
+            )
+            {
+                resultRawAssets.Add(asset.Name, asset);
+            }
+        }
+
+        resultMainAssets = DependencyHelper.AddMissingDependencies(
+            currentAssets.MainAssets,
             eventAssets.MainAssets,
-            ManifestAssetNameComparer.Instance
+            resultMainAssets
         );
 
-        var uniqueRawAssets = new HashSet<ManifestAsset>(
-            eventAssets.RawAssets,
-            ManifestAssetNameComparer.Instance
-        );
-
-        uniqueEventAssets.ExceptWith(preEventAssets.MainAssets);
-        uniqueEventAssets.ExceptWith(currentAssets.MainAssets); // Don't copy assets for new characters/dragons/etc that stayed after the event
-
-        uniqueRawAssets.ExceptWith(preEventAssets.RawAssets);
-        uniqueRawAssets.ExceptWith(currentAssets.RawAssets);
-
-        return new ManifestAssetCollection(uniqueEventAssets, uniqueRawAssets);
+        return new ManifestAssetCollection(resultMainAssets, resultRawAssets);
     }
 
     private static void AddAssetToManifest(
@@ -201,25 +239,19 @@ internal sealed partial class AddEventAssetsCommand
 
         AssetTypeValueField childToAdd = CreateFieldFromAssetModel(
             array.TemplateField,
-            updatedAsset,
-            assetPath
+            updatedAsset
         );
         array.Children.Add(childToAdd);
     }
 
     private static void AddRawAssetToManifest(
         AssetTypeValueField targetField,
-        ManifestAsset assetToAdd,
-        string assetPath
+        ManifestAsset assetToAdd
     )
     {
         AssetTypeValueField? array = targetField["rawAssets"]["Array"];
 
-        AssetTypeValueField childToAdd = CreateFieldFromAssetModel(
-            array.TemplateField,
-            assetToAdd,
-            assetPath
-        );
+        AssetTypeValueField childToAdd = CreateFieldFromAssetModel(array.TemplateField, assetToAdd);
         array.Children.Add(childToAdd);
     }
 
@@ -230,8 +262,7 @@ internal sealed partial class AddEventAssetsCommand
 
     private static AssetTypeValueField CreateFieldFromAssetModel(
         AssetTypeTemplateField arrayTemplate,
-        ManifestAsset manifestAsset,
-        string assetPath
+        ManifestAsset manifestAsset
     )
     {
         AssetTypeValueField? field = ValueBuilder.DefaultValueFieldFromArrayTemplate(arrayTemplate);
@@ -241,25 +272,36 @@ internal sealed partial class AddEventAssetsCommand
 
         if (manifestAsset.Dependencies is not null)
         {
-            field["dependencies"]
-                .Children.AddRange(
-                    manifestAsset.Dependencies.Select(x =>
-                    {
-                        // TODO: this is utter nonsense
-                        return new AssetTypeValueField() { Value = new AssetTypeValue(x) };
-                    })
-                );
+            AssetTypeValueField? dependenciesArray = field["dependencies"]["Array"];
+            Debug.Assert(dependenciesArray is { IsDummy: false, TemplateField.IsArray: true });
+
+            dependenciesArray.Children.AddRange(
+                manifestAsset.Dependencies.Select(x =>
+                {
+                    AssetTypeValueField? value = ValueBuilder.DefaultValueFieldFromArrayTemplate(
+                        dependenciesArray
+                    );
+                    value.AsString = x;
+                    return value;
+                })
+            );
         }
 
         if (manifestAsset.Assets is not null)
         {
-            field["assets"]
-                .Children.AddRange(
-                    manifestAsset.Assets.Select(x =>
-                    {
-                        return new AssetTypeValueField() { Value = new AssetTypeValue(x) };
-                    })
-                );
+            AssetTypeValueField? assetsArray = field["assets"]["Array"];
+            Debug.Assert(assetsArray is { IsDummy: false, TemplateField.IsArray: true });
+
+            assetsArray.Children.AddRange(
+                manifestAsset.Assets.Select(x =>
+                {
+                    AssetTypeValueField? value = ValueBuilder.DefaultValueFieldFromArrayTemplate(
+                        assetsArray
+                    );
+                    value.AsString = x;
+                    return value;
+                })
+            );
         }
 
         field["size"].AsLong = manifestAsset.Size;
@@ -283,18 +325,33 @@ internal sealed partial class AddEventAssetsCommand
         return newElements.ToList();
     }
 
-    private static void CreateDirectoryAndCopy(string bundlePath, string outputPath)
+    private static void CreateOutputDirectory(string outputPath)
     {
         string outputDir =
             Path.GetDirectoryName(outputPath)
             ?? throw new InvalidOperationException("Failed to get directory to create");
         Directory.CreateDirectory(outputDir);
+    }
 
-        File.Copy(bundlePath, outputPath, overwrite: true);
+    private static void ValidateNoMissingDependenciesFinal(AssetTypeValueField manifestField)
+    {
+        AssetTypeValueField? array = manifestField["categories"]["Array"][1]["assets"]["Array"];
+
+        var assets = array.Select(x => x["name"].AsString).ToHashSet();
+        var dependencies = array
+            .SelectMany(x => x["dependencies"]["Array"].Children.Select(y => y.AsString))
+            .ToHashSet();
+
+        dependencies.ExceptWith(assets);
+
+        if (dependencies.Count != 0)
+        {
+            throw new InvalidOperationException("Found missing dependencies!!!!!");
+        }
     }
 
     private record struct ManifestAssetCollection(
-        HashSet<ManifestAsset> MainAssets,
-        HashSet<ManifestAsset> RawAssets
+        Dictionary<string, ManifestAsset> MainAssets,
+        Dictionary<string, ManifestAsset> RawAssets
     );
 }
