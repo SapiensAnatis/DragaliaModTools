@@ -99,8 +99,11 @@ internal static partial class SerializableDictionaryHelper
     {
         int capacity = dict["entriesHashCode.Array"].Children.Count;
 
-        SerializableDictionary<string, JsonElement> serializedDict =
-            new(source, capacity, DeterministicStringEqualityComparer.Instance);
+        SerializableDictionary<string, JsonElement> serializedDict = new(
+            source,
+            capacity,
+            DeterministicStringEqualityComparer.Instance
+        );
 
         UpdateFromDictionary(dict, serializedDict);
     }
@@ -112,22 +115,21 @@ internal static partial class SerializableDictionaryHelper
     {
         int capacity = dict["entriesHashCode.Array"].Children.Count;
 
-        SerializableDictionary<int, JsonElement> serializedDict =
-            new(
-                source.Select(x =>
+        SerializableDictionary<int, JsonElement> serializedDict = new(
+            source.Select(x =>
+            {
+                if (!int.TryParse(x.Key, out int intKey))
                 {
-                    if (!int.TryParse(x.Key, out int intKey))
-                    {
-                        throw new ArgumentException(
-                            $"Failed to parse key {x} to integer",
-                            nameof(source)
-                        );
-                    }
+                    throw new ArgumentException(
+                        $"Failed to parse key {x} to integer",
+                        nameof(source)
+                    );
+                }
 
-                    return new KeyValuePair<int, JsonElement>(intKey, x.Value);
-                }),
-                capacity
-            );
+                return new KeyValuePair<int, JsonElement>(intKey, x.Value);
+            }),
+            capacity
+        );
 
         UpdateFromDictionary(dict, serializedDict);
     }
@@ -216,7 +218,7 @@ internal static partial class SerializableDictionaryHelper
                 AssetValueType.String => element.GetString() ?? string.Empty,
                 AssetValueType.Float => element.GetSingle(),
                 AssetValueType.Double => element.GetDouble(),
-                _ => throw new NotSupportedException($"Unrecognized type {fieldType}")
+                _ => throw new NotSupportedException($"Unrecognized type {fieldType}"),
             };
         }
     }

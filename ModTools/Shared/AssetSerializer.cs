@@ -8,8 +8,6 @@ namespace ModTools.Shared;
 
 internal static class AssetSerializer
 {
-    private static ReadOnlySpan<byte> Utf8Bom => new byte[] { 0xEF, 0xBB, 0xBF };
-
     public static void Serialize(Stream stream, AssetTypeValueField field)
     {
         using Utf8JsonWriter writer = new(stream, new JsonWriterOptions() { Indented = true });
@@ -65,17 +63,13 @@ internal static class AssetSerializer
                     case AssetValueType.Bool:
                         writer.WriteBooleanValue(assetField.AsBool);
                         break;
-                    case AssetValueType.Int8
-                    or AssetValueType.Int16
-                    or AssetValueType.Int32:
+                    case AssetValueType.Int8 or AssetValueType.Int16 or AssetValueType.Int32:
                         writer.WriteNumberValue(assetField.AsInt);
                         break;
                     case AssetValueType.Int64:
                         writer.WriteNumberValue(assetField.AsLong);
                         break;
-                    case AssetValueType.UInt8
-                    or AssetValueType.UInt16
-                    or AssetValueType.UInt32:
+                    case AssetValueType.UInt8 or AssetValueType.UInt16 or AssetValueType.UInt32:
                         writer.WriteNumberValue(assetField.AsUInt);
                         break;
                     case AssetValueType.UInt64:
@@ -128,17 +122,13 @@ internal static class AssetSerializer
                 case AssetValueType.Bool:
                     valueField.AsBool = element.GetBoolean();
                     break;
-                case AssetValueType.Int8
-                or AssetValueType.Int16
-                or AssetValueType.Int32:
+                case AssetValueType.Int8 or AssetValueType.Int16 or AssetValueType.Int32:
                     valueField.AsInt = element.GetInt32();
                     break;
                 case AssetValueType.Int64:
                     valueField.AsLong = element.GetInt64();
                     break;
-                case AssetValueType.UInt8
-                or AssetValueType.UInt16
-                or AssetValueType.UInt32:
+                case AssetValueType.UInt8 or AssetValueType.UInt16 or AssetValueType.UInt32:
                     valueField.AsUInt = element.GetUInt32();
                     break;
                 case AssetValueType.UInt64:

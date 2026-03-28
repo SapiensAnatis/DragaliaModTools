@@ -94,7 +94,7 @@ internal static partial class SerializableDictionaryHelper
         {
             AssetValueType.Int32 => typeof(int),
             AssetValueType.String => typeof(string),
-            _ => throw new NotSupportedException($"Keys of type {keyType} are not supported.")
+            _ => throw new NotSupportedException($"Keys of type {keyType} are not supported."),
         };
 
         if (typeof(TKey) != supportedClrKeyType)
@@ -106,8 +106,11 @@ internal static partial class SerializableDictionaryHelper
 
         int capacity = dict["entriesHashCode.Array"].Children.Count;
 
-        SerializableDictionary<TKey, TObject> serializedDict =
-            new(source, capacity, GetKeyComparer<TKey>());
+        SerializableDictionary<TKey, TObject> serializedDict = new(
+            source,
+            capacity,
+            GetKeyComparer<TKey>()
+        );
 
         UpdateFromArray(dict["buckets.Array"], serializedDict.buckets);
         UpdateFromArray(dict["entriesHashCode.Array"], serializedDict.entriesHashCode);
