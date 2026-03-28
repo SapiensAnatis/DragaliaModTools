@@ -18,8 +18,6 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public string Path => this.bundleInstance.path;
 
-    public Stream DataStream => this.bundleInstance.DataStream;
-
     private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
         this.manager = manager;
@@ -33,7 +31,7 @@ internal sealed class AssetBundleHelper : IDisposable
         {
             if (name.EndsWith(".resS", StringComparison.InvariantCultureIgnoreCase))
             {
-                ConsoleApp.Log(
+                ConsoleApp.LogVerbose(
                     $"Skipping load of streamed assets file instance {name} at index {idx}"
                 );
                 continue;
