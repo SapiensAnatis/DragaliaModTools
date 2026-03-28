@@ -11,6 +11,13 @@ ConsoleApp.JsonSerializerOptions = ModToolsSerializerContext.Default.Options;
 app.UseFilter<ExceptionHandlerFilter>();
 app.UseFilter<GlobalOptions.SetGlobalOptionsFilter>();
 
+ConsoleApp.LogError = static (msg) =>
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.Error.WriteLine(msg);
+    Console.ResetColor();
+};
+
 app.ConfigureGlobalOptions(
     (ref builder) =>
     {
@@ -19,7 +26,14 @@ app.ConfigureGlobalOptions(
             "Whether to decrease memory usage, at the expense of performance, by reading bundles directly from disk without loading them into memory first.",
             false
         );
-        return new GlobalOptions(readFromDisk);
+
+        bool verbose = builder.AddGlobalOption(
+            "--verbose",
+            "Whether to print extra log messages",
+            false
+        );
+
+        return new GlobalOptions(readFromDisk, verbose);
     }
 );
 
