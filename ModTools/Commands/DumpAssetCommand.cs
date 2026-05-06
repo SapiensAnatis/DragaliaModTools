@@ -3,7 +3,7 @@ using ModTools.Shared;
 
 namespace ModTools.Commands;
 
-internal class DumpAssetCommand
+internal sealed class DumpAssetCommand
 {
     /// <summary>
     /// Dumps a JSON object representing an asset's fields to standard output.

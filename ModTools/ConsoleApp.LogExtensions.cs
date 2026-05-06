@@ -22,6 +22,13 @@ internal static partial class ConsoleApp
             Log($"[DEBUG] {msg}");
         }
     }
+
+    public static void LogWarning(string msg)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.Error.WriteLine($"[WARN] {msg}");
+        Console.ResetColor();
+    }
 }
 
 [InterpolatedStringHandler]
