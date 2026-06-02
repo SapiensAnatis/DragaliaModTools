@@ -32,107 +32,89 @@ internal static class BundleMerger
         AssetTypeValueField tgtContainer = tgtBundleField["m_Container.Array"];
         AssetTypeValueField srcContainer = srcBundleField["m_Container.Array"];
 
-        HashSet<string> existingNames = tgtContainer
+        var existingNames = tgtContainer
             .Children.Select(c => c[0].AsString)
             .ToHashSet(StringComparer.Ordinal);
 
-        long nextPathId = NextPathId(tgtInst);
-
-        Dictionary<int, ushort> srcToTgtScriptIdx = BuildScriptIndexMap(
-            target.Manager,
-            tgtInst,
-            source.Manager,
-            srcInst
-        );
+        var existingPathIds = tgtInst.file.AssetInfos.Select(x => x.PathId).ToHashSet();
 
         int copied = 0;
-        foreach (AssetTypeValueField srcEntry in srcContainer.Children)
+
+        List<string> copiedNames = [];
+
+        foreach (AssetFileInfo srcInfo in srcInst.file.AssetInfos)
         {
-            string name = srcEntry[0].AsString;
-            if (existingNames.Contains(name))
+            AssetTypeValueField srcBaseField = source.GetBaseField(srcInfo);
+            string? name = srcBaseField["m_Name"] is { IsDummy: false } nameField
+                ? nameField.AsString
+                : null;
+
+            if (name != null && existingNames.Contains(name))
             {
                 continue;
             }
 
-            AssetTypeValueField pptr = srcEntry[1]["asset"];
-            int srcFileId = pptr["m_FileID"].AsInt;
-            long srcPathId = pptr["m_PathID"].AsLong;
-
-            if (srcFileId != 0)
+            if (existingPathIds.Contains(srcInfo.PathId))
             {
-                ConsoleApp.LogWarning(
-                    $"[WARN] Skipping container entry '{name}' from source bundle: "
-                        + $"references external fileID {srcFileId}, cross-file merge is not supported"
-                );
                 continue;
             }
 
-            AssetFileInfo? srcInfo = srcInst.file.GetAssetInfo(srcPathId);
-            if (srcInfo is null)
-            {
-                ConsoleApp.LogWarning(
-                    $"[WARN] Skipping container entry '{name}': source asset at pathID {srcPathId} not found"
-                );
-                continue;
-            }
+            const ushort defaultScriptIndex = 0xFFFF;
 
             int classId = srcInfo.TypeId;
-            ushort tgtScriptIdx = 0xFFFF;
+            ushort tgtScriptIdx = defaultScriptIndex;
 
             if (classId == (int)AssetClassID.MonoBehaviour)
             {
-                int srcScriptIdx = srcInfo.GetScriptIndex(srcInst.file);
-                if (srcScriptIdx == 0xFFFF)
-                {
-                    ConsoleApp.LogWarning(
-                        $"[WARN] Skipping container entry '{name}': MonoBehaviour with no script index"
-                    );
-                    continue;
-                }
-
-                if (!srcToTgtScriptIdx.TryGetValue(srcScriptIdx, out tgtScriptIdx))
-                {
-                    ConsoleApp.LogWarning(
-                        $"[WARN] Skipping container entry '{name}': source script index "
-                            + $"{srcScriptIdx} has no matching script in target bundle"
-                    );
-                    continue;
-                }
+                // This mapping appears to be 1:1
+                tgtScriptIdx = srcInfo.GetScriptIndex(srcInst.file);
             }
 
             AssetTypeValueField srcField = source.GetBaseField(srcInfo);
 
-            long newPathId = nextPathId++;
-
             AssetFileInfo newInfo = AssetFileInfo.Create(
                 tgtInst.file,
-                newPathId,
+                srcInfo.PathId,
                 classId,
                 tgtScriptIdx
             );
             newInfo.SetNewData(srcField);
             tgtInst.file.Metadata.AddAssetInfo(newInfo);
 
-            AssetTypeValueField newContainerEntry = ValueBuilder.DefaultValueFieldFromArrayTemplate(
-                tgtContainer.TemplateField
-            );
-            newContainerEntry[0].AsString = name;
-
-            AssetTypeValueField newAssetInfo = newContainerEntry[1];
-            // Mirror preload range from source so any preload table semantics carry over.
-            newAssetInfo["preloadIndex"].AsInt = srcEntry[1]["preloadIndex"].AsInt;
-            newAssetInfo["preloadSize"].AsInt = srcEntry[1]["preloadSize"].AsInt;
-            newAssetInfo["asset"]["m_FileID"].AsInt = 0;
-            newAssetInfo["asset"]["m_PathID"].AsLong = newPathId;
-
-            tgtContainer.Children.Add(newContainerEntry);
-            existingNames.Add(name);
+            if (name != null)
+            {
+                copiedNames.Add(name);
+            }
 
             ConsoleApp.LogVerbose(
-                $"  merged asset '{name}' (classId {classId}, srcPathId {srcPathId} -> tgtPathId {newPathId})"
+                $"  merged asset '{name}' (classId {classId}, srcPathId {srcInfo.PathId})"
             );
 
             copied++;
+        }
+
+        var srcContainerEntries = srcContainer.ToDictionary(
+            child => child[0].AsString,
+            child => child
+        );
+
+        foreach (string copiedName in copiedNames)
+        {
+            AssetTypeValueField src = sr
+            
+            AssetTypeValueField newContainerEntry = ValueBuilder.DefaultValueFieldFromArrayTemplate(
+                tgtContainer.TemplateField
+            );
+            newContainerEntry[0].AsString = copiedName;
+
+            AssetTypeValueField newAssetInfo = newContainerEntry[1];
+            // Mirror preload range from source so any preload table semantics carry over.
+            newAssetInfo["preloadIndex"].AsInt = src[1]["preloadIndex"].AsInt;
+            newAssetInfo["preloadSize"].AsInt = src[1]["preloadSize"].AsInt;
+            newAssetInfo["asset"]["m_FileID"].AsInt = 0;
+            newAssetInfo["asset"]["m_PathID"].AsLong = srcInfo.PathId;
+
+            tgtContainer.Children.Add(newContainerEntry);
         }
 
         tgtBundleInfo.SetNewData(tgtBundleField);

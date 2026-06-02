@@ -115,9 +115,6 @@ internal sealed partial class AddEventAssetsCommand
             using AssetBundleHelper eventBundle = AssetBundleHelper.FromPath(eventBundlePath);
 
             int copied = BundleMerger.MergeInto(target: baselineBundle, source: eventBundle);
-            ConsoleApp.LogVerbose(
-                $"[INFO] Merged {copied} asset(s) from event into baseline bundle '{entry.Event.Name}'"
-            );
 
             if (conversion)
             {
@@ -142,8 +139,14 @@ internal sealed partial class AddEventAssetsCommand
             CreateOutputDirectory(mergedOutputPath);
             File.Move(tempFilePath, mergedOutputPath, overwrite: true);
 
-            // Re-derive the assets list from the freshly-merged bundle so the
-            // manifest entry reflects the post-merge container contents.
+            ConsoleApp.LogVerbose(
+                $"[INFO] Merged {copied} asset(s) from event into baseline bundle '{entry.Baseline.Name}'. New hash: '{mergedHash}'"
+            );
+
+            // Re-derive the assets list and bundle dependencies from the
+            // freshly-merged bundle so the manifest entry reflects the
+            // post-merge container contents and any dependency bundles
+            // BundleMerger appended via the externals/m_Dependencies update.
             using AssetBundleHelper mergedReader = AssetBundleHelper.FromPath(mergedOutputPath);
             List<string> mergedAssetList = mergedReader
                 .GetContainerNames()
@@ -154,11 +157,22 @@ internal sealed partial class AddEventAssetsCommand
                 )
                 .ToList();
 
+            AssetTypeValueField mergedBundleField = mergedReader.GetBaseField(
+                mergedReader
+                    .FileInstances[0]
+                    .file.GetAssetsOfType(AssetClassID.AssetBundle)
+                    .Single()
+            );
+            List<string> mergedDependencies = mergedBundleField["m_Dependencies.Array"]
+                .Children.Select(c => c.AsString.Replace(".a", "", StringComparison.Ordinal))
+                .ToList();
+
             ManifestAsset mergedAsset = entry.Baseline with
             {
                 Hash = mergedHash,
                 Size = mergedSize,
                 Assets = mergedAssetList,
+                Dependencies = mergedDependencies,
             };
 
             UpdateAssetInManifest(targetBaseField, mergedAsset);
@@ -359,6 +373,22 @@ internal sealed partial class AddEventAssetsCommand
                 {
                     AssetTypeValueField? value = ValueBuilder.DefaultValueFieldFromArrayTemplate(
                         assetsArray
+                    );
+                    value.AsString = x;
+                    return value;
+                })
+            );
+        }
+
+        if (updated.Dependencies is not null)
+        {
+            AssetTypeValueField? dependenciesArray = existing["dependencies"]["Array"];
+            dependenciesArray.Children.Clear();
+            dependenciesArray.Children.AddRange(
+                updated.Dependencies.Select(x =>
+                {
+                    AssetTypeValueField? value = ValueBuilder.DefaultValueFieldFromArrayTemplate(
+                        dependenciesArray
                     );
                     value.AsString = x;
                     return value;
