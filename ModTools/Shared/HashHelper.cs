@@ -12,12 +12,7 @@ internal static class HashHelper
         return GetHash(fileStream);
     }
 
-    public static string GetHash(AssetBundleHelper assetBundle)
-    {
-        return GetHash(assetBundle.DataStream);
-    }
-
-    private static string GetHash(Stream assetBundleStream)
+    public static string GetHash(Stream assetBundleStream)
     {
         Span<byte> hash = stackalloc byte[32];
         Span<char> dest = stackalloc char[52];

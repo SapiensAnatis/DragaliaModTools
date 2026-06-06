@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace ModTools.Shared;
 
-internal sealed record GlobalOptions(bool ReadFromDisk)
+internal sealed record GlobalOptions(bool ReadFromDisk, bool Verbose)
 {
     public static GlobalOptions Instance { get; private set; } = null!;
 

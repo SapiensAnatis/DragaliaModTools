@@ -18,7 +18,7 @@ internal sealed class AssetBundleHelper : IDisposable
 
     public string Path => this.bundleInstance.path;
 
-    public Stream DataStream => this.bundleInstance.DataStream;
+    public AssetsManager Manager => this.manager;
 
     private AssetBundleHelper(AssetsManager manager, BundleFileInstance bundleInstance)
     {
@@ -33,7 +33,7 @@ internal sealed class AssetBundleHelper : IDisposable
         {
             if (name.EndsWith(".resS", StringComparison.InvariantCultureIgnoreCase))
             {
-                ConsoleApp.Log(
+                ConsoleApp.LogVerbose(
                     $"Skipping load of streamed assets file instance {name} at index {idx}"
                 );
                 continue;
@@ -150,10 +150,17 @@ internal sealed class AssetBundleHelper : IDisposable
     {
         AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
 
-        var assetBundleInfo = this.manager.GetBaseField(
-            assetsFileInstance,
-            assetsFileInstance.file.GetAssetInfo(pathId: 1)
-        );
+        // Asset bundle info is not always at path ID 1, some bundles have it at path ID 2
+        if (
+            assetsFileInstance.file.GetAssetsOfType(AssetClassID.AssetBundle)
+            is not [var bundleInfoAsset]
+        )
+        {
+            ConsoleApp.LogWarning("[WARN] Failed to find single asset bundle metadata");
+            yield break;
+        }
+
+        var assetBundleInfo = this.manager.GetBaseField(assetsFileInstance, bundleInfoAsset);
 
         var container = assetBundleInfo["m_Container.Array"];
         foreach (var containerChild in container.Children)
@@ -170,7 +177,7 @@ internal sealed class AssetBundleHelper : IDisposable
         return this.GetBaseField(fileInfo);
     }
 
-    public AssetTypeValueField GetBaseField(int pathId, int fileIndex = 0)
+    public AssetTypeValueField GetBaseField(long pathId, int fileIndex = 0)
     {
         AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
 
