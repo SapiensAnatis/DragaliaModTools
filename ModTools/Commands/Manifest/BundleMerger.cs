@@ -153,16 +153,15 @@ internal static class BundleMerger
             srcInst
         );
 
+        HashSet<ScriptRefKey> existingScriptTypes = tgtInst
+            .file.Metadata.ScriptTypes.Select(x => new ScriptRefKey(x))
+            .ToHashSet();
+
         // Add missing scripts...
         foreach (var (srcScriptIdx, srcScript) in srcInst.file.Metadata.ScriptTypes.Index())
         {
-            if (
-                tgtInst.file.Metadata.ScriptTypes.Any(x =>
-                    x.FileId == srcScript.FileId && x.PathId == srcScript.PathId
-                )
-            )
+            if (existingScriptTypes.Contains(new ScriptRefKey(srcScript)))
             {
-                // Already exists (TODO improve check with HashSet)
                 continue;
             }
 
@@ -526,6 +525,12 @@ internal static class BundleMerger
         AssetTypeValueField RootField,
         AssetTypeValueField Field
     );
+
+    private record struct ScriptRefKey(int FileID, long PathId)
+    {
+        public ScriptRefKey(AssetPPtr ptr)
+            : this(ptr.FileId, ptr.PathId) { }
+    }
 
     private record struct ScriptKey(string AsmName, string Namespace, string ClassName)
     {
