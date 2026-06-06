@@ -1,9 +1,9 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
+using ModTools.Shared;
 
-namespace ModTools.Shared;
+namespace ModTools.Commands.Manifest;
 
 /// <summary>
 /// Performs an asset-by-asset merge of one asset bundle into another, used for
@@ -39,10 +39,10 @@ internal static class BundleMerger
         AssetTypeValueField tgtPreloadTable = tgtBundleField["m_PreloadTable.Array"];
         AssetTypeValueField srcPreloadTable = srcBundleField["m_PreloadTable.Array"];
 
-        var existingNames = tgtContainer
+        HashSet<string> existingNames = tgtContainer
             .Children.Select(c => c[0].AsString)
             .ToHashSet(StringComparer.Ordinal);
-        var existingPathIds = tgtInst.file.AssetInfos.Select(x => x.PathId).ToHashSet();
+        HashSet<long> existingPathIds = tgtInst.file.AssetInfos.Select(x => x.PathId).ToHashSet();
 
         Dictionary<int, int> srcToTgtFileIdMap = srcInst
             .file.Metadata.Externals.Index()
@@ -83,13 +83,16 @@ internal static class BundleMerger
 
             AssetTypeValueField newAssetInfo = newContainerEntry[1];
 
-            // The preload table contains a list of path IDs and file IDs to load. The cocntainer array provides
+            // The preload table contains a list of path IDs and file IDs to load. The container array provides
             // an (index, length) window into the preload table. We should copy the length part of the window, but
             // will have to re-compute the index after copying over the preload table entries from the source.
             int srcPreloadIdx = srcEntry[1]["preloadIndex"].AsInt;
             int srcPreloadSize = srcEntry[1]["preloadSize"].AsInt;
 
-            var srcPreloadEntries = srcPreloadTable.Children.Slice(srcPreloadIdx, srcPreloadSize);
+            List<AssetTypeValueField> srcPreloadEntries = srcPreloadTable.Children.Slice(
+                srcPreloadIdx,
+                srcPreloadSize
+            );
 
             int newPreloadIndex = tgtPreloadTable.Children.Count;
 
@@ -146,21 +149,23 @@ internal static class BundleMerger
             fieldStack.Push(new DfsEntry(srcPathId, name, rootField, rootField));
         }
 
-        var srcToTgtScriptIndexMap = BuildScriptIndexMap(
+        Dictionary<int, ushort> srcToTgtScriptIndexMap = BuildScriptIndexMap(
             target.Manager,
             tgtInst,
             source.Manager,
             srcInst
         );
 
-        HashSet<ScriptRefKey> existingScriptTypes = tgtInst
-            .file.Metadata.ScriptTypes.Select(x => new ScriptRefKey(x))
+        var existingScriptTypes = tgtInst
+            .file.Metadata.ScriptTypes.Select(ScriptRefKey.FromAssetPPtr)
             .ToHashSet();
 
         // Add missing scripts...
-        foreach (var (srcScriptIdx, srcScript) in srcInst.file.Metadata.ScriptTypes.Index())
+        foreach (
+            (int srcScriptIdx, AssetPPtr? srcScript) in srcInst.file.Metadata.ScriptTypes.Index()
+        )
         {
-            if (existingScriptTypes.Contains(new ScriptRefKey(srcScript)))
+            if (existingScriptTypes.Contains(ScriptRefKey.FromAssetPPtr(srcScript)))
             {
                 continue;
             }
@@ -181,7 +186,7 @@ internal static class BundleMerger
             );
             int newScriptIdx = tgtInst.file.Metadata.ScriptTypes.Count - 1;
 
-            var srcTypeInfo = srcInst.file.Metadata.TypeTreeTypes.First(x =>
+            TypeTreeType? srcTypeInfo = srcInst.file.Metadata.TypeTreeTypes.First(x =>
                 x.ScriptTypeIndex == srcScriptIdx
             );
 
@@ -255,7 +260,6 @@ internal static class BundleMerger
                 continue;
             }
 
-            // Push children in reverse so left-to-right DFS order is preserved
             foreach (AssetTypeValueField child in field.Children)
             {
                 fieldStack.Push(entry with { Field = child });
@@ -297,12 +301,7 @@ internal static class BundleMerger
                 }
             }
 
-            AssetFileInfo newInfo = AssetFileInfo.Create(
-                tgtInst.file,
-                srcPathId,
-                classId,
-                scriptIdx
-            );
+            var newInfo = AssetFileInfo.Create(tgtInst.file, srcPathId, classId, scriptIdx);
 
             if (classId == (int)AssetClassID.MonoBehaviour)
             {
@@ -435,12 +434,12 @@ internal static class BundleMerger
         AssetTypeValueField srcList = srcActionParts["list.Array"];
         AssetTypeValueField tgtList = tgtActionParts["list.Array"];
 
-        var existingKeys = tgtList.Children.Select(KeyOf).ToHashSet();
+        var existingKeys = tgtList.Children.Select(ActionPartsKey.FromField).ToHashSet();
 
         int oldLength = tgtList.Children.Count;
         foreach (AssetTypeValueField srcEntry in srcList.Children)
         {
-            if (existingKeys.Add(KeyOf(srcEntry)))
+            if (existingKeys.Add(ActionPartsKey.FromField(srcEntry)))
             {
                 tgtList.Children.Add(srcEntry);
             }
@@ -451,10 +450,6 @@ internal static class BundleMerger
         ConsoleApp.Log(
             $"Merged {tgtList.Children.Count - oldLength} new action parts entries into target"
         );
-        return;
-
-        static (string Group, string ResourcePath) KeyOf(AssetTypeValueField entry) =>
-            (entry["_group"].AsString, entry["_resourcePath"].AsString);
     }
 
     private static bool TryGetActionPartsList(
@@ -499,18 +494,24 @@ internal static class BundleMerger
     {
         Dictionary<int, ushort> map = [];
 
-        var srcInfos = AssetHelper.GetAssetsFileScriptInfos(srcManager, srcInst);
-        var tgtInfos = AssetHelper.GetAssetsFileScriptInfos(tgtManager, tgtInst);
+        Dictionary<int, AssetTypeReference>? srcInfos = AssetHelper.GetAssetsFileScriptInfos(
+            srcManager,
+            srcInst
+        );
+        Dictionary<int, AssetTypeReference>? tgtInfos = AssetHelper.GetAssetsFileScriptInfos(
+            tgtManager,
+            tgtInst
+        );
 
         Dictionary<ScriptKey, ushort> tgtByKey = new();
         foreach ((int tgtIdx, AssetTypeReference info) in tgtInfos)
         {
-            tgtByKey[new ScriptKey(info)] = checked((ushort)tgtIdx);
+            tgtByKey[ScriptKey.FromTypeReference(info)] = checked((ushort)tgtIdx);
         }
 
         foreach ((int srcIdx, AssetTypeReference info) in srcInfos)
         {
-            if (tgtByKey.TryGetValue(new ScriptKey(info), out ushort tgtIdx))
+            if (tgtByKey.TryGetValue(ScriptKey.FromTypeReference(info), out ushort tgtIdx))
             {
                 map[srcIdx] = tgtIdx;
             }
@@ -528,13 +529,25 @@ internal static class BundleMerger
 
     private record struct ScriptRefKey(int FileID, long PathId)
     {
-        public ScriptRefKey(AssetPPtr ptr)
-            : this(ptr.FileId, ptr.PathId) { }
+        public static ScriptRefKey FromAssetPPtr(AssetPPtr ptr)
+        {
+            return new ScriptRefKey(ptr.FileId, ptr.PathId);
+        }
     }
 
     private record struct ScriptKey(string AsmName, string Namespace, string ClassName)
     {
-        public ScriptKey(AssetTypeReference info)
-            : this(info.AsmName, info.Namespace, info.ClassName) { }
+        public static ScriptKey FromTypeReference(AssetTypeReference info)
+        {
+            return new ScriptKey(info.AsmName, info.Namespace, info.ClassName);
+        }
+    }
+
+    private record struct ActionPartsKey(string GroupName, string ResourceName)
+    {
+        public static ActionPartsKey FromField(AssetTypeValueField entry)
+        {
+            return new ActionPartsKey(entry["_group"].AsString, entry["_resourcePath"].AsString);
+        }
     }
 }
