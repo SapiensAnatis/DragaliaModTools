@@ -144,7 +144,9 @@ internal static class BundleMerger
 
             AssetTypeValueField rootField = source.GetBaseField(srcInfo);
 
-            ConsoleApp.Log($"Going to contained-assigned asset: {name}");
+            ConsoleApp.LogVerbose(
+                $"Will copy across asset with container, along with dependencies: {name}"
+            );
 
             fieldStack.Push(new DfsEntry(srcPathId, name, rootField, rootField));
         }
@@ -232,8 +234,8 @@ internal static class BundleMerger
                     field["m_FileID"].AsInt = fixedFileId;
                     srcInst.file.GetAssetInfo(entry.RootPathId).SetNewData(entry.RootField);
 
-                    ConsoleApp.Log(
-                        $"Updated asset reference {field.TypeName} at path {entry.RootPathId} to reference file ID {fixedFileId} with path ID {refPathId}"
+                    ConsoleApp.LogVerbose(
+                        $"Updated asset reference {field.TypeName} at in hierarchy of asset {entry.RootName} to reference file ID {fixedFileId} instead of {refFileId}"
                     );
 
                     continue;
@@ -338,7 +340,7 @@ internal static class BundleMerger
             )
         )
         {
-            ConsoleApp.Log("Deep merging action parts list");
+            ConsoleApp.LogVerbose("Deep merging action parts list");
             MergeActionPartsList(tgtFileInfo, srcActionParts, tgtActionParts);
         }
 
@@ -447,7 +449,7 @@ internal static class BundleMerger
 
         tgtFileInfo.SetNewData(tgtActionParts);
 
-        ConsoleApp.Log(
+        ConsoleApp.LogVerbose(
             $"Merged {tgtList.Children.Count - oldLength} new action parts entries into target"
         );
     }

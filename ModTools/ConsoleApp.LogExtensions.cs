@@ -11,7 +11,9 @@ internal static partial class ConsoleApp
     {
         if (GlobalOptions.Instance.Verbose)
         {
-            Log($"[DEBUG] {builder.BuildString()}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Log(builder.BuildString());
+            Console.ResetColor();
         }
     }
 
@@ -19,14 +21,16 @@ internal static partial class ConsoleApp
     {
         if (GlobalOptions.Instance.Verbose)
         {
-            Log($"[DEBUG] {msg}");
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Log(msg);
+            Console.ResetColor();
         }
     }
 
     public static void LogWarning(string msg)
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Error.WriteLine($"[WARN] {msg}");
+        Console.Error.WriteLine(msg);
         Console.ResetColor();
     }
 }

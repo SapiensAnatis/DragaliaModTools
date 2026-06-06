@@ -54,7 +54,7 @@ internal sealed partial class AddEventAssetsCommand
         {
             string bundlePath = Path.Combine(assetsDir, GetAssetPath(asset.Hash));
 
-            ConsoleApp.LogVerbose($"Adding asset: {asset.Name}");
+            ConsoleApp.Log($"Adding asset: {asset.Name}");
 
             AssetBundleHelper? openedBundle = null;
 
@@ -107,7 +107,7 @@ internal sealed partial class AddEventAssetsCommand
             string baselineBundlePath = Path.Combine(assetsDir, GetAssetPath(entry.Baseline.Hash));
             string eventBundlePath = Path.Combine(assetsDir, GetAssetPath(entry.Event.Hash));
 
-            ConsoleApp.LogVerbose(
+            ConsoleApp.Log(
                 $"Deep-merging bundle '{entry.Event.Name}': baseline {entry.Baseline.Hash} <- event {entry.Event.Hash}"
             );
 
@@ -135,8 +135,8 @@ internal sealed partial class AddEventAssetsCommand
                 mergedSize = tempReadFs.Length;
             }
 
-            ConsoleApp.LogVerbose(
-                $"[INFO] Merged {copied} asset(s) from event into baseline bundle '{entry.Event.Name}' -> merge result written as {mergedHash}"
+            ConsoleApp.Log(
+                $"Merged {copied} asset(s) from event into baseline bundle '{entry.Event.Name}' -> merge result written as {mergedHash}"
             );
 
             string mergedOutputPath = Path.Combine(outputBundleDir, GetAssetPath(mergedHash));
@@ -188,7 +188,7 @@ internal sealed partial class AddEventAssetsCommand
         byte[] decrypted = ms.ToArray();
         byte[] encrypted = RijndaelHelper.Encrypt(decrypted);
 
-        ConsoleApp.Log($"[INFO] Writing output to {resultOutputPath}");
+        ConsoleApp.Log($"Writing output to {resultOutputPath}");
         await File.WriteAllBytesAsync(resultOutputPath, encrypted);
     }
 
