@@ -177,7 +177,7 @@ internal sealed class AssetBundleHelper : IDisposable
         return this.GetBaseField(fileInfo);
     }
 
-    public AssetTypeValueField GetBaseField(int pathId, int fileIndex = 0)
+    public AssetTypeValueField GetBaseField(long pathId, int fileIndex = 0)
     {
         AssetsFileInstance assetsFileInstance = this.fileInstances[fileIndex];
 
