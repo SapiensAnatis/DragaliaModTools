@@ -50,13 +50,13 @@ internal sealed class AssetBundleHelper : IDisposable
             }
             catch
             {
-                ConsoleApp.LogError($"[ERROR] Failed to load file instance {name} at index {idx}");
+                ConsoleApp.LogError($"Failed to load file instance {name} at index {idx}");
                 throw;
             }
 
             if (instance == null)
             {
-                ConsoleApp.LogError($"[WARNING] Skipping null file instance {name} at index {idx}");
+                ConsoleApp.LogWarning($"Skipping null file instance {name} at index {idx}");
                 continue;
             }
 
@@ -87,7 +87,7 @@ internal sealed class AssetBundleHelper : IDisposable
         }
         catch
         {
-            ConsoleApp.LogError($"[WARNING] Failed to open file at {path}");
+            ConsoleApp.LogError($"Failed to open file at {path}");
 
             using var reader = new StreamReader(path, Encoding.UTF8);
             if (
@@ -99,7 +99,7 @@ internal sealed class AssetBundleHelper : IDisposable
             )
             {
                 ConsoleApp.LogError(
-                    "[WARNING] It looks like this file is a Git LFS pointer. Did you do git lfs pull?"
+                    "It looks like this file is a Git LFS pointer. Did you do git lfs pull?"
                 );
             }
 
@@ -156,7 +156,7 @@ internal sealed class AssetBundleHelper : IDisposable
             is not [var bundleInfoAsset]
         )
         {
-            ConsoleApp.LogWarning("[WARN] Failed to find single asset bundle metadata");
+            ConsoleApp.LogWarning("Failed to find single asset bundle metadata");
             yield break;
         }
 

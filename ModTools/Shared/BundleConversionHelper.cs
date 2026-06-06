@@ -29,8 +29,8 @@ internal static class BundleConversionHelper
                 || fileInstance.file.GetAssetsOfType(AssetClassID.ComputeShader).Count != 0
             )
             {
-                ConsoleApp.Log(
-                    $"[WARNING] Shaders detected in asset {fileInstance.name} of bundle {bundleHelper.Path}"
+                ConsoleApp.LogWarning(
+                    $"Shaders detected in asset {fileInstance.name} of bundle {bundleHelper.Path}"
                 );
             }
         }

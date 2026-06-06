@@ -238,7 +238,8 @@ internal sealed partial class AddEventAssetsCommand
         }
 
         // They don't always seem to clean up the assets after the event is over, so diffing the manifest before
-        // the event started and the one delivered with the event seems like the most reliable strategy
+        // the event started and the one delivered with the event seems like a more reliable strategy than diffing
+        // the manifest from the event vs. one after it
 
         string preEventManifest = ManifestDates
             .Where(x => x.Date < period.StartDate)
