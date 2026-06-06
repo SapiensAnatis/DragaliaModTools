@@ -304,7 +304,26 @@ internal static class BundleMerger
                 classId,
                 scriptIdx
             );
-            newInfo.SetNewData(srcField);
+
+            if (classId == (int)AssetClassID.MonoBehaviour)
+            {
+                // When bringing over old MonoBehaviour, the MonoScript may have been updated with new fields, so if we
+                // port the fields over directly then we could create an invalid asset. Instead, create a template field
+                // and populate it with the fields we do have.
+                AssetTypeValueField newBaseField = target.Manager.CreateValueBaseField(
+                    tgtInst,
+                    classId,
+                    scriptIdx
+                );
+
+                CopyMatchingFields(srcField, newBaseField);
+                newInfo.SetNewData(newBaseField);
+            }
+            else
+            {
+                newInfo.SetNewData(srcField);
+            }
+
             tgtInst.file.Metadata.AddAssetInfo(newInfo);
         }
 
@@ -326,6 +345,81 @@ internal static class BundleMerger
         }
 
         return pathIdsToCopy.Count;
+    }
+
+    /// <summary>
+    /// Recursively copies values from <paramref name="src"/> into the
+    /// already-templated <paramref name="dst"/>, matching purely on field name.
+    /// Only fields present in <em>both</em> the (old) source asset and the (new)
+    /// destination template are copied: fields that exist only in the new
+    /// template keep their default values, and fields that exist only in the old
+    /// source are dropped. This lets an old serialized MonoBehaviour be poured
+    /// into a newer MonoScript layout without producing an invalid asset.
+    /// </summary>
+    private static void CopyMatchingFields(AssetTypeValueField src, AssetTypeValueField dst)
+    {
+        AssetTypeTemplateField dstTemplate = dst.TemplateField;
+
+        // Primitive / string leaf — copy the scalar straight across, but only if
+        // the source stored the same value type (e.g. an int that became a long
+        // is left at its default rather than being mis-serialized).
+        if (dstTemplate is { HasValue: true, IsArray: false })
+        {
+            if (src.TemplateField.ValueType == dstTemplate.ValueType)
+            {
+                dst.Value = src.Value;
+            }
+
+            return;
+        }
+
+        // Byte array (TypelessData) — a leaf whose value is the backing bytes.
+        if (dstTemplate is { IsArray: true, ValueType: AssetValueType.ByteArray })
+        {
+            if (src.TemplateField.ValueType == AssetValueType.ByteArray)
+            {
+                dst.Value = src.Value;
+            }
+
+            return;
+        }
+
+        // Real array (vector / list) — rebuild every element from the
+        // destination's element template so each element is itself reconciled
+        // against the new layout, then recurse into it.
+        if (dstTemplate is { IsArray: true })
+        {
+            if (src.TemplateField is not { IsArray: true, ValueType: not AssetValueType.ByteArray })
+            {
+                return;
+            }
+
+            // children[0] is the size field, children[1] is the element template.
+            dst.Children.Clear();
+            foreach (AssetTypeValueField srcElement in src.Children)
+            {
+                AssetTypeValueField dstElement = ValueBuilder.DefaultValueFieldFromArrayTemplate(
+                    dstTemplate
+                );
+                CopyMatchingFields(srcElement, dstElement);
+                dst.Children.Add(dstElement);
+            }
+
+            return;
+        }
+
+        // Struct / object — match children by name and recurse into the ones the
+        // source actually has.
+        foreach (AssetTypeValueField dstChild in dst.Children)
+        {
+            AssetTypeValueField srcChild = src[dstChild.FieldName];
+            if (srcChild.IsDummy)
+            {
+                continue;
+            }
+
+            CopyMatchingFields(srcChild, dstChild);
+        }
     }
 
     /// <summary>
@@ -397,12 +491,6 @@ internal static class BundleMerger
         return info;
     }
 
-    private static long NextPathId(AssetsFileInstance inst)
-    {
-        long max = inst.file.Metadata.AssetInfos.Select(info => info.PathId).DefaultIfEmpty().Max();
-        return max + 1;
-    }
-
     private static Dictionary<int, ushort> BuildScriptIndexMap(
         AssetsManager tgtManager,
         AssetsFileInstance tgtInst,
@@ -434,7 +522,7 @@ internal static class BundleMerger
 
     private record struct DfsEntry(
         long RootPathId,
-        string? RootName,
+        string? RootName, // For debugging
         AssetTypeValueField RootField,
         AssetTypeValueField Field
     );
