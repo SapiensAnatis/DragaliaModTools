@@ -115,9 +115,6 @@ internal sealed partial class AddEventAssetsCommand
             using AssetBundleHelper eventBundle = AssetBundleHelper.FromPath(eventBundlePath);
 
             int copied = BundleMerger.MergeInto(target: baselineBundle, source: eventBundle);
-            ConsoleApp.LogVerbose(
-                $"[INFO] Merged {copied} asset(s) from event into baseline bundle '{entry.Event.Name}'"
-            );
 
             if (conversion)
             {
@@ -137,6 +134,10 @@ internal sealed partial class AddEventAssetsCommand
                 mergedHash = HashHelper.GetHash(tempReadFs);
                 mergedSize = tempReadFs.Length;
             }
+
+            ConsoleApp.LogVerbose(
+                $"[INFO] Merged {copied} asset(s) from event into baseline bundle '{entry.Event.Name}' -> merge result written as {mergedHash}"
+            );
 
             string mergedOutputPath = Path.Combine(outputBundleDir, GetAssetPath(mergedHash));
             CreateOutputDirectory(mergedOutputPath);
